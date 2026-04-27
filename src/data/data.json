@@ -1,0 +1,91 @@
+{
+  "hotel": {
+    "name": "Hotel Abhijeeth INN",
+    "tagline": "Comfort, redefined.",
+    "address": "MG Road, Mangalore, Karnataka",
+    "phone": "+91 98452 11122",
+    "email": "stay@abhijeethinn.com"
+  },
+  "dashboard": {
+    "revenue": 1284500,
+    "occupancy": 78,
+    "totalBookings": 248,
+    "availableRooms": 14,
+    "checkIns": 12,
+    "checkOuts": 8,
+    "trend": [
+      { "label": "Mon", "bookings": 18, "revenue": 42000 },
+      { "label": "Tue", "bookings": 22, "revenue": 51000 },
+      { "label": "Wed", "bookings": 26, "revenue": 58000 },
+      { "label": "Thu", "bookings": 24, "revenue": 56000 },
+      { "label": "Fri", "bookings": 32, "revenue": 72000 },
+      { "label": "Sat", "bookings": 40, "revenue": 91000 },
+      { "label": "Sun", "bookings": 36, "revenue": 84000 }
+    ]
+  },
+  "bookings": [
+    { "id": "BK-1042", "guest": "Aarav Sharma", "room": "201 · Deluxe", "checkIn": "2026-04-26", "checkOut": "2026-04-29", "status": "confirmed", "amount": 8400 },
+    { "id": "BK-1043", "guest": "Priya Nair", "room": "305 · Suite", "checkIn": "2026-04-27", "checkOut": "2026-04-28", "status": "checked-in", "amount": 5200 },
+    { "id": "BK-1044", "guest": "Rohit Verma", "room": "108 · Standard", "checkIn": "2026-04-27", "checkOut": "2026-04-30", "status": "pending", "amount": 6300 },
+    { "id": "BK-1045", "guest": "Meera Iyer", "room": "402 · Suite", "checkIn": "2026-04-28", "checkOut": "2026-05-01", "status": "confirmed", "amount": 12600 },
+    { "id": "BK-1046", "guest": "Karthik Rao", "room": "210 · Deluxe", "checkIn": "2026-04-25", "checkOut": "2026-04-27", "status": "checked-out", "amount": 5600 },
+    { "id": "BK-1047", "guest": "Sneha Pillai", "room": "112 · Standard", "checkIn": "2026-04-29", "checkOut": "2026-05-02", "status": "confirmed", "amount": 6300 },
+    { "id": "BK-1048", "guest": "Vikram Shetty", "room": "303 · Suite", "checkIn": "2026-04-26", "checkOut": "2026-04-27", "status": "cancelled", "amount": 4200 }
+  ],
+  "rooms": [
+    { "id": 101, "type": "Standard", "price": 2100, "status": "available", "amenities": ["WiFi", "AC", "TV"] },
+    { "id": 102, "type": "Standard", "price": 2100, "status": "occupied", "amenities": ["WiFi", "AC", "TV"] },
+    { "id": 108, "type": "Standard", "price": 2100, "status": "cleaning", "amenities": ["WiFi", "AC", "TV"] },
+    { "id": 112, "type": "Standard", "price": 2100, "status": "available", "amenities": ["WiFi", "AC"] },
+    { "id": 201, "type": "Deluxe", "price": 2800, "status": "occupied", "amenities": ["WiFi", "AC", "TV", "Mini-bar"] },
+    { "id": 202, "type": "Deluxe", "price": 2800, "status": "available", "amenities": ["WiFi", "AC", "TV", "Mini-bar"] },
+    { "id": 210, "type": "Deluxe", "price": 2800, "status": "cleaning", "amenities": ["WiFi", "AC", "TV"] },
+    { "id": 303, "type": "Suite", "price": 4200, "status": "available", "amenities": ["WiFi", "AC", "TV", "Mini-bar", "Lounge"] },
+    { "id": 305, "type": "Suite", "price": 4200, "status": "occupied", "amenities": ["WiFi", "AC", "TV", "Mini-bar", "Lounge"] },
+    { "id": 402, "type": "Suite", "price": 4200, "status": "occupied", "amenities": ["WiFi", "AC", "TV", "Lounge", "Balcony"] },
+    { "id": 405, "type": "Suite", "price": 4200, "status": "available", "amenities": ["WiFi", "AC", "TV", "Lounge", "Balcony"] },
+    { "id": 410, "type": "Suite", "price": 4200, "status": "cleaning", "amenities": ["WiFi", "AC", "TV", "Lounge"] }
+  ],
+  "pricing": [
+    { "type": "Standard", "weekday": 2100, "weekend": 2400, "season": "Regular" },
+    { "type": "Deluxe", "weekday": 2800, "weekend": 3200, "season": "Regular" },
+    { "type": "Suite", "weekday": 4200, "weekend": 4800, "season": "Regular" }
+  ],
+  "seasons": [
+    { "name": "Festive Season", "dates": "Oct 15 – Nov 15", "uplift": 20 },
+    { "name": "Winter Holidays", "dates": "Dec 20 – Jan 5", "uplift": 35 },
+    { "name": "Monsoon Special", "dates": "Jun 15 – Aug 31", "discount": 15 }
+  ],
+  "guests": [
+    { "id": "G-201", "name": "Aarav Sharma", "phone": "+91 98201 11122", "email": "aarav@example.com", "stays": 4, "lastVisit": "2026-04-26" },
+    { "id": "G-202", "name": "Priya Nair", "phone": "+91 98101 33445", "email": "priya@example.com", "stays": 2, "lastVisit": "2026-04-27" },
+    { "id": "G-203", "name": "Rohit Verma", "phone": "+91 99800 55667", "email": "rohit@example.com", "stays": 1, "lastVisit": "2026-04-27" },
+    { "id": "G-204", "name": "Meera Iyer", "phone": "+91 90004 77889", "email": "meera@example.com", "stays": 6, "lastVisit": "2026-04-28" },
+    { "id": "G-205", "name": "Karthik Rao", "phone": "+91 98453 99001", "email": "karthik@example.com", "stays": 3, "lastVisit": "2026-04-25" },
+    { "id": "G-206", "name": "Sneha Pillai", "phone": "+91 98860 22113", "email": "sneha@example.com", "stays": 2, "lastVisit": "2026-04-29" }
+  ],
+  "staff": [
+    { "id": "S-01", "name": "Ramesh Kumar", "role": "Admin", "email": "ramesh@abhijeethinn.com", "shift": "General", "status": "active" },
+    { "id": "S-02", "name": "Anjali Menon", "role": "Receptionist", "email": "anjali@abhijeethinn.com", "shift": "Morning", "status": "active" },
+    { "id": "S-03", "name": "Suresh Pai", "role": "Receptionist", "email": "suresh@abhijeethinn.com", "shift": "Evening", "status": "active" },
+    { "id": "S-04", "name": "Divya Hegde", "role": "Receptionist", "email": "divya@abhijeethinn.com", "shift": "Night", "status": "on-leave" }
+  ],
+  "reports": {
+    "monthlyRevenue": [
+      { "month": "Nov", "revenue": 820000 },
+      { "month": "Dec", "revenue": 1120000 },
+      { "month": "Jan", "revenue": 980000 },
+      { "month": "Feb", "revenue": 1040000 },
+      { "month": "Mar", "revenue": 1180000 },
+      { "month": "Apr", "revenue": 1284500 }
+    ],
+    "occupancyTrend": [
+      { "month": "Nov", "occupancy": 62 },
+      { "month": "Dec", "occupancy": 84 },
+      { "month": "Jan", "occupancy": 71 },
+      { "month": "Feb", "occupancy": 74 },
+      { "month": "Mar", "occupancy": 79 },
+      { "month": "Apr", "occupancy": 78 }
+    ]
+  }
+}
