@@ -12,7 +12,7 @@ import {
   Grid3x3,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useRole } from "@/context/RoleContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
   SidebarContent,
@@ -46,7 +46,8 @@ const receptionistItems = [
 ];
 
 export function AppSidebar() {
-  const { role } = useRole();
+  const { user } = useAuth();
+  const role = user?.role ?? "receptionist";
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const items = role === "admin" ? adminItems : receptionistItems;
