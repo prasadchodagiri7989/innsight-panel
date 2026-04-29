@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { adminApi } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 const statusStyle: Record<string, string> = {
@@ -12,7 +14,9 @@ const statusStyle: Record<string, string> = {
 };
 
 export default function Allocation() {
+  const navigate = useNavigate();
   const { data, isLoading } = useQuery({ queryKey: ["admin-rooms-alloc"], queryFn: () => adminApi.getRooms() });
+  const [hoveredOccupied, setHoveredOccupied] = useState<string | null>(null);
   const rooms = data?.data ?? [];
 
   const counts = rooms.reduce((acc, r) => {
@@ -25,7 +29,7 @@ export default function Allocation() {
     <div className="space-y-6">
       <PageHeader title="Room allocation" subtitle="Live status of all rooms across the property." />
       {isLoading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading&#8230;</div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -42,12 +46,30 @@ export default function Allocation() {
               <div key={floor} className="panel p-5">
                 <h3 className="mb-4 font-display text-sm font-semibold text-muted-foreground">Floor {floor}</h3>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-                  {floorRooms.map((r) => (
-                    <div key={r._id} className={cn("group flex aspect-square flex-col items-center justify-center rounded-xl border-2 p-2 transition-all hover:-translate-y-0.5 cursor-default", statusStyle[r.status] ?? statusStyle["available"])}>
-                      <span className="font-display text-xl font-bold leading-none">{r.roomNumber}</span>
-                      <span className="mt-1 text-[10px] font-medium uppercase tracking-wider opacity-80">{r.type.replace("Deluxe ","")}</span>
-                    </div>
-                  ))}
+                  {floorRooms.map((r) => {
+                    const isOccupied = r.status === "occupied";
+                    return (
+                      <div
+                        key={r._id}
+                        onClick={() => isOccupied && navigate("/active-guests")}
+                        onMouseEnter={() => isOccupied && setHoveredOccupied(r._id)}
+                        onMouseLeave={() => setHoveredOccupied(null)}
+                        title={isOccupied ? "Click to view guest details" : undefined}
+                        className={cn(
+                          "group flex aspect-square flex-col items-center justify-center rounded-xl border-2 p-2 transition-all hover:-translate-y-0.5",
+                          isOccupied ? "cursor-pointer" : "cursor-default",
+                          hoveredOccupied === r._id ? "ring-2 ring-destructive ring-offset-1" : "",
+                          statusStyle[r.status] ?? statusStyle["available"]
+                        )}
+                      >
+                        <span className="font-display text-xl font-bold leading-none">{r.roomNumber}</span>
+                        <span className="mt-1 text-[10px] font-medium uppercase tracking-wider opacity-80">{r.type.replace("Deluxe ","")}</span>
+                        {isOccupied && (
+                          <span className="mt-0.5 text-[9px] opacity-60 group-hover:opacity-100 transition-opacity">tap for details</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );

@@ -5,7 +5,7 @@ import { receptionApi } from "@/lib/api";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { differenceInCalendarDays } from "date-fns";
 
-const fmtINR = (n: number) => "&#8377;" + new Intl.NumberFormat("en-IN").format(n);
+const fmtINR = (n: number) => "₹" + new Intl.NumberFormat("en-IN").format(n);
 
 function Field({ label, placeholder, type = "text", value, onChange }: {
   label: string; placeholder?: string; type?: string; value: string; onChange: (v: string) => void;
@@ -88,7 +88,7 @@ export default function WalkIn() {
                 onChange={(e) => setForm(f=>({...f,roomId:e.target.value}))}
                 className="h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10">
                 {available.map((r) => (
-                  <option key={r._id} value={r._id}>Room {r.roomNumber} &#183; {r.type} &#183; {fmtINR(r.price)}/night</option>
+                  <option key={r._id} value={r._id}>Room {r.roomNumber} · {r.type} · {fmtINR(r.price)}/night</option>
                 ))}
               </select>
             </div>

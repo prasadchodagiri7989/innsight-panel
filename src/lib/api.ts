@@ -244,6 +244,14 @@ export const adminApi = {
   getSettings: () => request<{ data: HotelSettings }>('/admin/settings'),
   updateSettings: (payload: Partial<HotelSettings>) =>
     request('/admin/settings', { method: 'PATCH', body: JSON.stringify(payload) }),
+
+  // Active guests
+  getActiveGuests: () => request<{ data: Booking[] }>('/admin/active-guests'),
+  changeGuestRoom: (bookingMongoId: string, newRoomId: string) =>
+    request<{ data: Booking }>(`/admin/bookings/${bookingMongoId}/change-room`, {
+      method: 'PATCH',
+      body: JSON.stringify({ newRoomId }),
+    }),
 };
 
 // ── Reception API ─────────────────────────────────────────────────────────────

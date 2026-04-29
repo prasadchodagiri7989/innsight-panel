@@ -8,7 +8,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { StatusBadge } from "@/components/ui/status-badge";
 import { format } from "date-fns";
 
-const fmtINR = (n: number) => "&#8377;" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(n);
+const fmtINR = (n: number) => "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(n);
 const tooltipStyle = { background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 } as const;
 
 export default function Dashboard() {
@@ -34,8 +34,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Welcome back, ${user?.name.split(" ")[0]} &#128075;`}
-        subtitle={role === "admin" ? "Here&#39;s how Hotel Abhijeeth INN is performing today." : "Here&#39;s your front-desk overview for today."}
+        title={`Welcome back, ${user?.name.split(" ")[0]} 👋`}
+        subtitle={role === "admin" ? "Here's how Hotel Abhijeeth INN is performing today." : "Here's your front-desk overview for today."}
       />
 
       {isLoading ? (
@@ -85,7 +85,7 @@ export default function Dashboard() {
                         <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">{b.bookingId}</td>
                         <td className="px-5 py-3.5 font-medium">{b.user?.name ?? "Guest"}</td>
                         <td className="px-5 py-3.5 text-muted-foreground">
-                          {b.room ? `${b.room.roomNumber} &#183; ${b.room.type}` : "—"}
+                          {b.room ? `${b.room.roomNumber} · ${b.room.type}` : "—"}
                         </td>
                         <td className="px-5 py-3.5"><StatusBadge status={b.status} /></td>
                         <td className="px-5 py-3.5 text-right font-semibold">{fmtINR(b.totalAmount)}</td>
@@ -102,7 +102,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="panel overflow-hidden">
                   <div className="border-b border-border/60 p-5">
-                    <h3 className="font-display text-base font-semibold">Today&#39;s Check-ins</h3>
+                    <h3 className="font-display text-base font-semibold">Today's Check-ins</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -130,7 +130,7 @@ export default function Dashboard() {
 
                 <div className="panel overflow-hidden">
                   <div className="border-b border-border/60 p-5">
-                    <h3 className="font-display text-base font-semibold">Today&#39;s Check-outs</h3>
+                    <h3 className="font-display text-base font-semibold">Today's Check-outs</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">

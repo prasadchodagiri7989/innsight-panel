@@ -25,13 +25,13 @@ export default function Guests() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input value={q} onChange={(e) => setQ(e.target.value)}
-              placeholder="Search by name, phone, or email&#8230;"
+              placeholder="Search by name, phone, or email…"
               className="h-10 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
             />
           </div>
         </div>
         {isLoading ? (
-          <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading guests&#8230;</div>
+          <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading guests…</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
