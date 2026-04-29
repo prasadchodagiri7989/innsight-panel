@@ -10,6 +10,7 @@ import {
   UserPlus,
   LogIn,
   Grid3x3,
+  UserCheck,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +30,7 @@ import {
 const adminItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Bookings", url: "/bookings", icon: CalendarRange },
+  { title: "Active Guests", url: "/active-guests", icon: UserCheck },
   { title: "Rooms", url: "/rooms", icon: BedDouble },
   { title: "Pricing", url: "/pricing", icon: IndianRupee },
   { title: "Guest Records", url: "/guests", icon: Users },
@@ -41,6 +43,7 @@ const receptionistItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Walk-in Booking", url: "/walk-in", icon: UserPlus },
   { title: "Check-in / out", url: "/check-in-out", icon: LogIn },
+  { title: "Active Guests", url: "/active-guests", icon: UserCheck },
   { title: "Room Allocation", url: "/allocation", icon: Grid3x3 },
   { title: "Guest Records", url: "/guests", icon: Users },
 ];

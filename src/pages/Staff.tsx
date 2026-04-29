@@ -47,7 +47,7 @@ export default function Staff() {
           </div>
           {formError && <p className="text-sm text-destructive">{formError}</p>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {[["name","Full name","text"],["salary","Salary (&#8377;)","number"],["phone","Phone","text"],["email","Email","email"]].map(([k,l,t]) => (
+            {[["name","Full name","text"],["salary","Salary (₹)","number"],["phone","Phone","text"],["email","Email","email"]].map(([k,l,t]) => (
               <div key={k}>
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">{l}</label>
                 <input type={t} value={(form as any)[k]} onChange={(e) => setForm(f => ({...f,[k]:e.target.value}))}

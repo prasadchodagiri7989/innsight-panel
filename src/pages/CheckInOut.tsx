@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Search, LogIn, LogOut, Plus, Trash2, User, Loader2, Receipt, CreditCard, Banknote, Printer, X, BedDouble, Calendar, Hash, Phone, Mail } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -599,9 +600,20 @@ function BookingCard({ b, onAction }: { b: Booking; onAction: () => void }) {
 type Tab = "confirmed" | "checked_in";
 
 export default function CheckInOut() {
-  const [tab, setTab] = useState<Tab>("confirmed");
-  const [q, setQ] = useState("");
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(
+    (searchParams.get("tab") as Tab) === "checked_in" ? "checked_in" : "confirmed"
+  );
+  const [q, setQ] = useState(searchParams.get("q") ?? "");
   const [refresh, setRefresh] = useState(0);
+
+  // Sync URL params if they change (e.g. navigated from global search)
+  useEffect(() => {
+    const urlTab = searchParams.get("tab");
+    const urlQ = searchParams.get("q");
+    if (urlTab === "checked_in" || urlTab === "confirmed") setTab(urlTab);
+    if (urlQ !== null) setQ(urlQ);
+  }, [searchParams]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["reception-bookings-active", refresh],

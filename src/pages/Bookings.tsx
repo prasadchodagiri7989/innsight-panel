@@ -6,7 +6,7 @@ import { adminApi } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 
-const fmtINR = (n: number) => "&#8377;" + new Intl.NumberFormat("en-IN").format(n);
+const fmtINR = (n: number) => "₹" + new Intl.NumberFormat("en-IN").format(n);
 
 const STATUSES = ["all","pending","confirmed","checked_in","checked_out","cancelled","completed"];
 
@@ -38,7 +38,7 @@ export default function Bookings() {
       <div className="panel flex flex-wrap items-center gap-3 p-4">
         <input
           type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search booking ID&#8230;"
+          placeholder="Search booking ID…"
           className="h-10 flex-1 min-w-[200px] rounded-xl border border-border bg-background px-4 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
         />
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
@@ -49,7 +49,7 @@ export default function Bookings() {
 
       <div className="panel overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading bookings&#8230;</div>
+          <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading bookings…</div>
         ) : isError ? (
           <div className="p-10 text-center text-sm text-destructive">Failed to load bookings.</div>
         ) : (
@@ -74,7 +74,7 @@ export default function Bookings() {
                   <tr key={b._id} className="border-b border-border/40 last:border-0 transition-colors hover:bg-muted/40">
                     <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">{b.bookingId}</td>
                     <td className="px-5 py-3.5 font-medium">{b.user?.name ?? b.guestDetails?.name ?? "Guest"}</td>
-                    <td className="px-5 py-3.5 text-muted-foreground">{b.room ? `${b.room.roomNumber} &#183; ${b.room.type}` : "—"}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground">{b.room ? `${b.room.roomNumber} · ${b.room.type}` : "—"}</td>
                     <td className="px-5 py-3.5 text-muted-foreground">{format(new Date(b.checkInDate), "dd MMM yyyy")}</td>
                     <td className="px-5 py-3.5 text-muted-foreground">{format(new Date(b.checkOutDate), "dd MMM yyyy")}</td>
                     <td className="px-5 py-3.5"><StatusBadge status={b.status} /></td>

@@ -18,6 +18,7 @@ import Settings from "./pages/Settings";
 import WalkIn from "./pages/WalkIn";
 import CheckInOut from "./pages/CheckInOut";
 import Allocation from "./pages/Allocation";
+import ActiveGuests from "./pages/ActiveGuests";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } });
@@ -56,6 +57,9 @@ function AppRoutes() {
       <Route path="/walk-in" element={<RequireAuth allow={["receptionist"]}><AppLayout><WalkIn /></AppLayout></RequireAuth>} />
       <Route path="/check-in-out" element={<RequireAuth allow={["admin", "receptionist"]}><AppLayout><CheckInOut /></AppLayout></RequireAuth>} />
       <Route path="/allocation" element={<RequireAuth allow={["admin", "receptionist"]}><AppLayout><Allocation /></AppLayout></RequireAuth>} />
+
+      {/* Active guests — admin + receptionist */}
+      <Route path="/active-guests" element={<RequireAuth allow={["admin", "receptionist"]}><AppLayout><ActiveGuests /></AppLayout></RequireAuth>} />
 
       {/* Shared */}
       <Route path="/guests" element={<RequireAuth><AppLayout><Guests /></AppLayout></RequireAuth>} />
