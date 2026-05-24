@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, LogIn, LogOut, Plus, Trash2, User, Loader2, Receipt, CreditCard, Banknote, Printer, X, BedDouble, Calendar, Hash, Phone, Mail } from "lucide-react";
+import { Search, LogIn, LogOut, Plus, Trash2, User, Loader2, Receipt, CreditCard, Banknote, Printer, X, BedDouble, Calendar, Hash, Phone, Mail, Home } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { receptionApi, type Booking, type InvoicePreview } from "@/lib/api";
@@ -160,7 +160,7 @@ function BookingDetailSection({ b }: { b: Booking }) {
       {/* Booking info grid */}
       <div className="grid grid-cols-2 gap-3 text-sm">
         <InfoCell icon={Hash} label="Booking ID" value={b.bookingId} mono />
-        <InfoCell icon={BedDouble} label="Room" value={`${b.room?.roomNumber ?? "—"} · ${b.room?.type ?? ""}`} />
+        <InfoCell icon={BedDouble} label="Room" value={b.room ? `${b.room.roomNumber} · ${b.room.type}` : `${b.roomType} (to be assigned)`} />
         <InfoCell icon={Calendar} label="Check-in" value={format(new Date(b.checkInDate), "EEE, dd MMM yyyy")} />
         <InfoCell icon={Calendar} label="Check-out" value={format(new Date(b.checkOutDate), "EEE, dd MMM yyyy")} />
         <InfoCell label="Nights" value={String(nights)} />
@@ -194,21 +194,33 @@ function InfoCell({ icon: Icon, label, value, mono }: { icon?: React.ElementType
 }
 
 // ── Check-in Dialog ───────────────────────────────────────────────────────────
-function CheckInDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void; onDone: (result: { advancePaid: number; advancePct: number }) => void }) {
+function CheckInDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void; onDone: (result: { advancePaid: number; advancePct: number; room: string }) => void }) {
   const qc = useQueryClient();
   const [payMethod, setPayMethod] = useState("cash");
+  const [selectedRoomId, setSelectedRoomId] = useState("");
+
+  // If booking has no room assigned yet, fetch available rooms of the required type
+  const needsRoomAssignment = !b.room;
+  const { data: availRoomsData, isLoading: roomsLoading } = useQuery({
+    queryKey: ["available-rooms-for-type", b.roomType],
+    queryFn: () => receptionApi.getRoomsByType(b.roomType),
+    enabled: needsRoomAssignment,
+  });
+  const availableRooms = availRoomsData?.data ?? [];
 
   // Estimate advance (10% default — actual comes from server)
   const estimatedAdvance = Math.round(b.subtotal * 0.1);
 
   const mutation = useMutation({
-    mutationFn: () => receptionApi.checkIn(b.bookingId, payMethod),
+    mutationFn: () => receptionApi.checkIn(b.bookingId, payMethod, needsRoomAssignment ? selectedRoomId : undefined),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["reception-bookings-active"] });
-      onDone(res.data);
+      onDone({ advancePaid: res.data.advancePaid, advancePct: res.data.advancePct, room: res.data.room });
       onClose();
     },
   });
+
+  const canCheckIn = !needsRoomAssignment || !!selectedRoomId;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -230,6 +242,41 @@ function CheckInDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void
         {/* Body */}
         <div className="overflow-y-auto p-6 space-y-5">
           <BookingDetailSection b={b} />
+
+          {/* Room assignment (for type-based online bookings) */}
+          {needsRoomAssignment && (
+            <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Home className="h-4 w-4 text-warning shrink-0" />
+                <p className="font-semibold text-sm">Assign a Room</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                This booking is for <strong>{b.roomType}</strong>. Select an available room to assign.
+              </p>
+              {roomsLoading ? (
+                <p className="text-xs text-muted-foreground">Loading available rooms…</p>
+              ) : availableRooms.length === 0 ? (
+                <p className="text-xs text-destructive">No available {b.roomType} rooms found.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {availableRooms.map((room) => (
+                    <button
+                      key={room._id}
+                      onClick={() => setSelectedRoomId(room._id)}
+                      className={`h-11 rounded-xl border text-sm font-medium transition-colors ${
+                        selectedRoomId === room._id
+                          ? "border-primary bg-primary-soft text-primary"
+                          : "border-border hover:bg-muted"
+                      }`}
+                    >
+                      Room {room.roomNumber}
+                      {room.floor && <span className="ml-1 text-xs opacity-70">(Fl {room.floor})</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Advance payment */}
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
@@ -255,7 +302,7 @@ function CheckInDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void
         {/* Footer */}
         <div className="flex gap-3 border-t border-border/60 px-6 py-4 shrink-0">
           <button onClick={onClose} className="flex-1 h-11 rounded-xl border border-border text-sm font-medium hover:bg-muted">Cancel</button>
-          <button onClick={() => mutation.mutate()} disabled={mutation.isPending}
+          <button onClick={() => mutation.mutate()} disabled={mutation.isPending || !canCheckIn}
             className="flex-1 h-11 rounded-xl bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-50 flex items-center justify-center gap-2">
             {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><LogIn className="h-4 w-4" /> Confirm Check-in & Collect Advance</>}
           </button>
@@ -489,7 +536,7 @@ function BookingCard({ b, onAction }: { b: Booking; onAction: () => void }) {
 
         {/* Stay info */}
         <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/40 p-3 text-xs">
-          <div><p className="text-muted-foreground">Room</p><p className="font-semibold">{b.room?.roomNumber ?? "—"} · {b.room?.type}</p></div>
+          <div><p className="text-muted-foreground">Room</p><p className="font-semibold">{b.room ? `${b.room.roomNumber} · ${b.room.type}` : `${b.roomType} (unassigned)`}</p></div>
           <div><p className="text-muted-foreground">Nights</p><p className="font-semibold">{b.nights}</p></div>
           <div><p className="text-muted-foreground">Check-in</p><p className="font-semibold">{format(new Date(b.checkInDate), "dd MMM yyyy")}</p></div>
           <div><p className="text-muted-foreground">Check-out</p><p className="font-semibold">{format(new Date(b.checkOutDate), "dd MMM yyyy")}</p></div>

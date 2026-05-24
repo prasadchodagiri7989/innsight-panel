@@ -57,6 +57,8 @@ export interface Booking {
   bookingId: string;
   user: User | null;
   room: Room | null;
+  roomType: string;
+  pricePerNight?: number;
   checkInDate: string;
   checkOutDate: string;
   guests: number;
@@ -254,6 +256,36 @@ export const adminApi = {
     }),
 };
 
+// ── Payments API ──────────────────────────────────────────────────────────────
+export interface Payment {
+  _id: string;
+  booking: { bookingId: string; roomType: string; checkInDate: string; checkOutDate: string; totalAmount: number; status: string } | null;
+  user: { name: string; email: string; phone?: string } | null;
+  amount: number;
+  method: string;
+  status: string;
+  transactionId?: string;
+  razorpayPaymentId?: string;
+  refundId?: string;
+  refundAmount?: number;
+  refundDate?: string;
+  notes?: string;
+  paidAt?: string;
+  createdAt: string;
+}
+
+export const paymentsApi = {
+  getAll: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ data: Payment[]; meta: { total: number; page: number; limit: number; pages: number } }>(`/payments${qs}`);
+  },
+  refund: (id: string, reason?: string, refundAmount?: number) =>
+    request<{ data: { refundId: string; refundAmount: number; status: string } }>(
+      `/payments/${id}/refund`,
+      { method: 'POST', body: JSON.stringify({ reason, refundAmount }) }
+    ),
+};
+
 // ── Reception API ─────────────────────────────────────────────────────────────
 export const receptionApi = {
   getToday: () => request<{ data: ReceptionToday }>('/reception/today'),
@@ -268,9 +300,9 @@ export const receptionApi = {
     guestDetails: { name: string; email: string; phone: string; idProof?: string };
     specialRequests?: string; source?: string;
   }) => request<{ data: Booking }>('/reception/book', { method: 'POST', body: JSON.stringify(payload) }),
-  checkIn: (bookingId: string, advancePaymentMethod = 'cash') =>
-    request<{ data: { bookingId: string; advancePaid: number; advancePct: number } }>(
-      '/reception/checkin', { method: 'POST', body: JSON.stringify({ bookingId, advancePaymentMethod }) }
+  checkIn: (bookingId: string, advancePaymentMethod = 'cash', roomId?: string) =>
+    request<{ data: { bookingId: string; room: string; advancePaid: number; advancePct: number } }>(
+      '/reception/checkin', { method: 'POST', body: JSON.stringify({ bookingId, advancePaymentMethod, ...(roomId ? { roomId } : {}) }) }
     ),
   checkOut: (bookingId: string, balancePaymentMethod = 'cash') =>
     request<{ data: { bookingId: string; invoice: Record<string, unknown>; guestName: string } }>(
@@ -285,4 +317,8 @@ export const receptionApi = {
       `/reception/bookings/${bookingId}/charges/${chargeId}`, { method: 'DELETE' }
     ),
   getRooms: () => request<{ data: Room[] }>('/rooms?limit=50', { auth: false }),
+  getRoomsByType: (type: string) => {
+    const qs = new URLSearchParams({ type, status: 'available', limit: '50' }).toString();
+    return request<{ data: Room[] }>(`/rooms?${qs}`, { auth: false });
+  },
 };
