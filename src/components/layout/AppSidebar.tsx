@@ -11,6 +11,7 @@ import {
   LogIn,
   Grid3x3,
   UserCheck,
+  Receipt,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,24 +29,26 @@ import {
 } from "@/components/ui/sidebar";
 
 const adminItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Bookings", url: "/bookings", icon: CalendarRange },
+  { title: "Dashboard",     url: "/",          icon: LayoutDashboard },
+  { title: "Bookings",      url: "/bookings",   icon: CalendarRange },
   { title: "Active Guests", url: "/active-guests", icon: UserCheck },
-  { title: "Rooms", url: "/rooms", icon: BedDouble },
-  { title: "Pricing", url: "/pricing", icon: IndianRupee },
-  { title: "Guest Records", url: "/guests", icon: Users },
-  { title: "Reports", url: "/reports", icon: BarChart3 },
-  { title: "Staff", url: "/staff", icon: UserCog },
-  { title: "Settings", url: "/settings", icon: Settings },
+  { title: "Rooms",         url: "/rooms",      icon: BedDouble },
+  { title: "Pricing",       url: "/pricing",    icon: IndianRupee },
+  { title: "Payments",      url: "/payments",   icon: Receipt },
+  { title: "Guest Records", url: "/guests",     icon: Users },
+  { title: "Reports",       url: "/reports",    icon: BarChart3 },
+  { title: "Staff",         url: "/staff",      icon: UserCog },
+  { title: "Settings",      url: "/settings",   icon: Settings },
 ];
 
 const receptionistItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Walk-in Booking", url: "/walk-in", icon: UserPlus },
-  { title: "Check-in / out", url: "/check-in-out", icon: LogIn },
-  { title: "Active Guests", url: "/active-guests", icon: UserCheck },
-  { title: "Room Allocation", url: "/allocation", icon: Grid3x3 },
-  { title: "Guest Records", url: "/guests", icon: Users },
+  { title: "Dashboard",        url: "/",             icon: LayoutDashboard },
+  { title: "Walk-in Booking",  url: "/walk-in",      icon: UserPlus },
+  { title: "Check-in / out",   url: "/check-in-out", icon: LogIn },
+  { title: "Active Guests",    url: "/active-guests",icon: UserCheck },
+  { title: "Room Allocation",  url: "/allocation",   icon: Grid3x3 },
+  { title: "Payments",         url: "/payments",     icon: Receipt },
+  { title: "Guest Records",    url: "/guests",       icon: Users },
 ];
 
 export function AppSidebar() {
