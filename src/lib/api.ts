@@ -322,3 +322,40 @@ export const receptionApi = {
     return request<{ data: Room[] }>(`/rooms?${qs}`, { auth: false });
   },
 };
+
+// ── Invoices API ──────────────────────────────────────────────────────────────
+export interface Invoice {
+  _id: string;
+  invoiceNumber: string;
+  booking: { _id: string; bookingId: string; checkInDate: string; checkOutDate: string; nights: number; status: string } | null;
+  user: { name: string; email: string; phone?: string } | null;
+  room: { roomNumber: string; type: string } | null;
+  roomSubtotal: number;
+  extraCharges: { description: string; amount: number; category: string }[];
+  extraChargesTotal: number;
+  subtotal: number;
+  cgstPercentage: number;
+  sgstPercentage: number;
+  cgst: number;
+  sgst: number;
+  tax: number;
+  totalAmount: number;
+  advancePaid: number;
+  advancePaymentMethod: string;
+  balanceDue: number;
+  balancePaymentMethod: string;
+  generatedAt: string;
+}
+
+export const invoicesApi = {
+  list: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ data: Invoice[]; meta: { total: number; page: number; limit: number; pages: number } }>(`/invoices${qs}`);
+  },
+  getByBooking: (mongoBookingId: string) =>
+    request<{ data: Invoice }>(`/invoices/${mongoBookingId}`),
+  downloadPdfUrl: (mongoBookingId: string) =>
+    `${BASE_URL}/invoices/${mongoBookingId}/pdf`,
+  sendEmail: (mongoBookingId: string) =>
+    request<{ message: string }>(`/invoices/${mongoBookingId}/email`, { method: 'POST' }),
+};

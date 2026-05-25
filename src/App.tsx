@@ -20,6 +20,7 @@ import CheckInOut from "./pages/CheckInOut";
 import Allocation from "./pages/Allocation";
 import ActiveGuests from "./pages/ActiveGuests";
 import Payments from "./pages/Payments";
+import Invoices from "./pages/Invoices";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } });
@@ -56,6 +57,9 @@ function AppRoutes() {
 
       {/* Payments — admin + receptionist */}
       <Route path="/payments" element={<RequireAuth allow={["admin", "receptionist"]}><AppLayout><Payments /></AppLayout></RequireAuth>} />
+
+      {/* Invoices — admin + receptionist */}
+      <Route path="/invoices" element={<RequireAuth allow={["admin", "receptionist"]}><AppLayout><Invoices /></AppLayout></RequireAuth>} />
 
       {/* Receptionist-only */}
       <Route path="/walk-in" element={<RequireAuth allow={["receptionist"]}><AppLayout><WalkIn /></AppLayout></RequireAuth>} />
