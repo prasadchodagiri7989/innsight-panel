@@ -35,7 +35,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <PageHeader
         title={`Welcome back, ${user?.name.split(" ")[0]} 👋`}
-        subtitle={role === "admin" ? "Here's how Hotel Abhijeeth INN is performing today." : "Here's your front-desk overview for today."}
+        subtitle={role === "admin" ? "Here's how Hotel Abhitej INN is performing today." : "Here's your front-desk overview for today."}
       />
 
       {isLoading ? (

@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, LogIn, LogOut, Plus, Trash2, User, Loader2, Receipt, CreditCard, Banknote, Printer, X, BedDouble, Calendar, Hash, Phone, Mail, Home } from "lucide-react";
+import { Search, LogIn, LogOut, Plus, Trash2, User, Loader2, Receipt, CreditCard, Banknote, Download, Send, CheckCircle2, X, BedDouble, Calendar, Hash, Phone, Mail, Home } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { receptionApi, type Booking, type InvoicePreview } from "@/lib/api";
+import { receptionApi, invoicesApi, type Booking, type InvoicePreview } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, differenceInDays } from "date-fns";
+import { toast } from "@/hooks/use-toast";
 
 const fmtINR = (n: number) => "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(n);
 
@@ -53,80 +54,174 @@ function Row({ label, value, muted, bold, color }: { label: string; value: strin
   );
 }
 
-// ── Printable Invoice Modal ───────────────────────────────────────────────────
-function PrintInvoiceModal({ inv, booking, onClose }: {
+// ── Bill Preview Modal (shown before checkout) ────────────────────────────────
+function BillPreviewModal({ inv, booking, payMethod, onClose, onConfirm, isPending }: {
+  inv: InvoicePreview;
+  booking: Booking;
+  payMethod: string;
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}) {
+  const guestName = booking.user?.name ?? booking.guestDetails?.name ?? "Guest";
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-card shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between border-b border-border/60 px-5 py-4 shrink-0">
+          <h2 className="font-display font-bold text-base flex items-center gap-2">
+            <Receipt className="h-4 w-4 text-primary" /> Bill Preview
+          </h2>
+          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="overflow-y-auto p-5 space-y-4">
+          <div className="rounded-xl bg-muted/40 px-4 py-2.5 text-sm">
+            <span className="text-muted-foreground">Guest: </span><span className="font-semibold">{guestName}</span>
+            <span className="mx-2 text-muted-foreground">·</span>
+            <span className="text-muted-foreground">Room: </span><span className="font-semibold">{booking.room?.roomNumber ?? "—"}</span>
+          </div>
+          <InvoicePanel inv={inv} advancePaid={booking.advancePaid} />
+          {inv.balanceDue > 0 && (
+            <div className="rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm">
+              <p className="font-semibold text-amber-800 dark:text-amber-300">Balance to collect</p>
+              <p className="text-2xl font-bold font-display text-amber-700 dark:text-amber-200 mt-0.5">{fmtINR(inv.balanceDue)}</p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5 capitalize">via {payMethod}</p>
+            </div>
+          )}
+          {inv.balanceDue === 0 && (
+            <div className="rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-success font-semibold">
+              No balance due — fully paid via advance.
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 border-t border-border/60 px-5 py-4 shrink-0">
+          <button onClick={onClose} disabled={isPending} className="flex-1 h-11 rounded-xl border border-border text-sm font-medium hover:bg-muted disabled:opacity-50">Back</button>
+          <button onClick={onConfirm} disabled={isPending}
+            className="flex-1 h-11 rounded-xl bg-destructive text-sm font-semibold text-destructive-foreground disabled:opacity-50 flex items-center justify-center gap-2">
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><LogOut className="h-4 w-4" /> Confirm Checkout</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Invoice Success Modal (after checkout) ────────────────────────────────────
+function InvoiceSuccessModal({ inv, booking, onClose }: {
   inv: Record<string, unknown>;
   booking: Booking;
   onClose: () => void;
 }) {
-  const printRef = useRef<HTMLDivElement>(null);
-  const guestName = booking.user?.name ?? booking.guestDetails?.name ?? "Guest";
+  const mongoBookingId = String(inv.booking ?? (booking as unknown as Record<string, unknown>)._id ?? "");
+  const [emailSent, setEmailSent] = useState(false);
 
-  const doPrint = () => {
-    const content = printRef.current?.innerHTML ?? "";
-    const win = window.open("", "_blank");
-    if (!win) return;
-    win.document.write(`<html><head><title>Invoice</title><style>
-      body{font-family:sans-serif;padding:32px;color:#111}
-      h1{font-size:22px;margin:0 0 4px}
-      .sub{color:#666;font-size:13px;margin-bottom:24px}
-      table{width:100%;border-collapse:collapse;margin-bottom:16px}
-      td,th{padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px}
-      th{background:#f9fafb;text-align:left;font-weight:600}
-      .right{text-align:right}.bold{font-weight:700}.total{font-size:15px}
-      .footer{margin-top:24px;color:#666;font-size:12px;border-top:1px solid #e5e7eb;padding-top:12px}
-    </style></head><body>${content}</body></html>`);
-    win.document.close();
-    win.focus();
-    win.print();
+  const emailMut = useMutation({
+    mutationFn: () => invoicesApi.sendEmail(mongoBookingId),
+    onSuccess: () => {
+      setEmailSent(true);
+      toast({ title: "Invoice emailed", description: "Invoice PDF sent to guest's email." });
+    },
+    onError: () => toast({ title: "Email failed", description: "Could not send email. Try again.", variant: "destructive" }),
+  });
+
+  const guestName = booking.user?.name ?? booking.guestDetails?.name ?? "Guest";
+  const guestEmail = booking.user?.email ?? booking.guestDetails?.email ?? "";
+  const fmt = (n: number) => "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(n);
+  const d = inv as Record<string, number | string>;
+
+  const handleDownload = async () => {
+    if (!mongoBookingId) return;
+    const token = localStorage.getItem("adminAccessToken") ?? "";
+    const url = invoicesApi.downloadPdfUrl(mongoBookingId);
+    try {
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) { toast({ title: "Download failed", variant: "destructive" }); return; }
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objUrl;
+      a.download = `invoice-${String(d.invoiceNumber ?? "")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(objUrl);
+    } catch {
+      toast({ title: "Download failed", variant: "destructive" });
+    }
   };
 
-  const fmt = (n: number) => "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(n);
-  const invoiceData = inv as Record<string, number | string>;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-card shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border/60 px-6 py-4">
-          <h2 className="font-display font-bold flex items-center gap-2"><Receipt className="h-4 w-4" /> Invoice</h2>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-card shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between border-b border-border/60 px-5 py-4 shrink-0">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-success" />
+            <h2 className="font-display font-bold text-base">Checkout Complete</h2>
+          </div>
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted"><X className="h-4 w-4" /></button>
         </div>
-        <div className="max-h-[70vh] overflow-y-auto p-6">
-          <div ref={printRef}>
-            <h1>Hotel Abhitej Inn</h1>
-            <p className="sub">Invoice #{String(invoiceData.invoiceNumber ?? "")}</p>
-            <table>
-              <tbody>
-                <tr><th>Guest</th><td className="right">{guestName}</td></tr>
-                <tr><th>Booking ID</th><td className="right">{booking.bookingId}</td></tr>
-                <tr><th>Room</th><td className="right">{booking.room?.roomNumber} · {booking.room?.type}</td></tr>
-                <tr><th>Check-in</th><td className="right">{booking.checkInDate ? format(new Date(booking.checkInDate), "dd MMM yyyy") : "—"}</td></tr>
-                <tr><th>Check-out</th><td className="right">{booking.checkOutDate ? format(new Date(booking.checkOutDate), "dd MMM yyyy") : "—"}</td></tr>
-              </tbody>
-            </table>
-            <table>
-              <thead><tr><th>Description</th><th className="right">Amount</th></tr></thead>
-              <tbody>
-                <tr><td>Room charges ({booking.nights} nights)</td><td className="right">{fmt(Number(invoiceData.roomSubtotal ?? booking.subtotal))}</td></tr>
-                {(invoiceData.extraChargesTotal as number) > 0 && (
-                  <tr><td>Extra charges</td><td className="right">{fmt(Number(invoiceData.extraChargesTotal))}</td></tr>
-                )}
-                <tr><td>CGST ({invoiceData.cgstPercentage}%)</td><td className="right">{fmt(Number(invoiceData.cgst ?? 0))}</td></tr>
-                <tr><td>SGST ({invoiceData.sgstPercentage}%)</td><td className="right">{fmt(Number(invoiceData.sgst ?? 0))}</td></tr>
-                <tr className="bold total"><td>Total</td><td className="right">{fmt(Number(invoiceData.totalAmount ?? booking.totalAmount))}</td></tr>
-                <tr><td>Advance paid ({booking.advancePaymentMethod})</td><td className="right">- {fmt(booking.advancePaid)}</td></tr>
-                <tr className="bold total"><td>Balance due ({String(invoiceData.balancePaymentMethod ?? "—")})</td><td className="right">{fmt(Number(invoiceData.balanceDue ?? 0))}</td></tr>
-              </tbody>
-            </table>
-            <p className="footer">Thank you for staying with us! — Hotel Abhitej Inn</p>
+
+        <div className="overflow-y-auto p-5 space-y-4">
+          {/* Invoice summary */}
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-4 text-sm space-y-2.5">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Invoice #</span>
+              <span className="font-mono font-semibold">{String(d.invoiceNumber ?? "—")}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Guest</span>
+              <span className="font-semibold">{guestName}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Room</span>
+              <span className="font-semibold">{booking.room?.roomNumber ?? "—"} · {booking.room?.type ?? "—"}</span>
+            </div>
+            <div className="my-1 border-t border-border/40" />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Total</span>
+              <span className="font-bold">{fmt(Number(d.totalAmount ?? 0))}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Advance paid</span>
+              <span className="text-muted-foreground">− {fmt(Number(d.advancePaid ?? 0))}</span>
+            </div>
+            <div className="flex justify-between border-t border-border/40 pt-2">
+              <span className="font-semibold">Balance collected</span>
+              <span className="font-bold text-success">{fmt(Number(d.balanceDue ?? 0))}</span>
+            </div>
+            {d.balancePaymentMethod && (
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Via</span><span className="capitalize">{String(d.balancePaymentMethod)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Extra charges breakdown */}
+          {Array.isArray(d.extraCharges) && (d.extraCharges as unknown[]).length > 0 && (
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3 text-xs space-y-1.5">
+              <p className="font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">Extra Charges</p>
+              {(d.extraCharges as Array<{ description: string; amount: number }>).map((c, i) => (
+                <div key={i} className="flex justify-between">
+                  <span>{c.description}</span><span className="font-semibold">{fmt(c.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="space-y-2">
+            <button onClick={handleDownload}
+              className="w-full h-11 rounded-xl bg-primary text-sm font-semibold text-primary-foreground flex items-center justify-center gap-2 hover:bg-primary/90">
+              <Download className="h-4 w-4" /> Download Invoice PDF
+            </button>
+            {guestEmail && (
+              <button onClick={() => emailMut.mutate()} disabled={emailMut.isPending || emailSent}
+                className="w-full h-11 rounded-xl border border-primary text-sm font-semibold text-primary flex items-center justify-center gap-2 hover:bg-primary/5 disabled:opacity-50">
+                {emailMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : emailSent ? <><CheckCircle2 className="h-4 w-4" /> Sent!</> : <><Send className="h-4 w-4" /> Email to {guestEmail}</>}
+              </button>
+            )}
           </div>
         </div>
-        <div className="flex gap-3 border-t border-border/60 px-6 py-4">
-          <button onClick={onClose} className="flex-1 h-10 rounded-xl border border-border text-sm hover:bg-muted">Close</button>
-          <button onClick={doPrint}
-            className="flex-1 h-10 rounded-xl bg-primary text-sm font-semibold text-primary-foreground flex items-center justify-center gap-2">
-            <Printer className="h-4 w-4" /> Print
-          </button>
+
+        <div className="border-t border-border/60 px-5 py-4 shrink-0">
+          <button onClick={onClose} className="w-full h-10 rounded-xl border border-border text-sm hover:bg-muted">Close</button>
         </div>
       </div>
     </div>
@@ -341,16 +436,30 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
     },
   });
 
+  const [showBillPreview, setShowBillPreview] = useState(false);
+
   const checkOutMut = useMutation({
     mutationFn: () => receptionApi.checkOut(b.bookingId, payMethod),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["reception-bookings-active"] });
       onDone(res.data.invoice as Record<string, unknown>);
+      setShowBillPreview(false);
       onClose();
     },
   });
 
   return (
+    <>
+      {showBillPreview && inv && (
+        <BillPreviewModal
+          inv={inv}
+          booking={b}
+          payMethod={payMethod}
+          onClose={() => setShowBillPreview(false)}
+          onConfirm={() => checkOutMut.mutate()}
+          isPending={checkOutMut.isPending}
+        />
+      )}
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="w-full max-w-xl rounded-2xl bg-card shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
@@ -361,7 +470,7 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
             </div>
             <div>
               <h2 className="font-display text-base font-bold leading-none">Check-out Guest</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Add any final charges, collect balance payment</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Add any final charges, then preview bill before confirming</p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted"><X className="h-4 w-4" /></button>
@@ -426,7 +535,7 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
           {/* Bill summary */}
           {inv && (
             <div>
-              <p className="mb-2 text-sm font-semibold">Final Bill</p>
+              <p className="mb-2 text-sm font-semibold">Bill Summary</p>
               <InvoicePanel inv={inv} advancePaid={b.advancePaid} />
             </div>
           )}
@@ -448,13 +557,14 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
         {/* Footer */}
         <div className="flex gap-3 border-t border-border/60 px-6 py-4 shrink-0">
           <button onClick={onClose} className="flex-1 h-11 rounded-xl border border-border text-sm font-medium hover:bg-muted">Cancel</button>
-          <button onClick={() => checkOutMut.mutate()} disabled={checkOutMut.isPending}
+          <button onClick={() => setShowBillPreview(true)} disabled={!inv}
             className="flex-1 h-11 rounded-xl bg-destructive text-sm font-semibold text-destructive-foreground disabled:opacity-50 flex items-center justify-center gap-2">
-            {checkOutMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><LogOut className="h-4 w-4" /> Complete Check-out</>}
+            <Receipt className="h-4 w-4" /> Preview Bill & Checkout
           </button>
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -516,7 +626,7 @@ function BookingCard({ b, onAction }: { b: Booking; onAction: () => void }) {
         />
       )}
       {showInvoiceModal && checkOutResult && (
-        <PrintInvoiceModal inv={checkOutResult} booking={b} onClose={() => setShowInvoiceModal(false)} />
+        <InvoiceSuccessModal inv={checkOutResult} booking={b} onClose={() => setShowInvoiceModal(false)} />
       )}
 
       <div className="panel space-y-4 p-5">
@@ -634,7 +744,7 @@ function BookingCard({ b, onAction }: { b: Booking; onAction: () => void }) {
           {checkOutResult && (
             <button onClick={() => setShowInvoiceModal(true)}
               className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary text-xs font-semibold text-primary-foreground">
-              <Printer className="h-3.5 w-3.5" /> Print Invoice
+              <Download className="h-3.5 w-3.5" /> Invoice
             </button>
           )}
         </div>

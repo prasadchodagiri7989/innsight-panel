@@ -12,6 +12,7 @@ import {
   Grid3x3,
   UserCheck,
   Receipt,
+  FileText,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +36,7 @@ const adminItems = [
   { title: "Rooms",         url: "/rooms",      icon: BedDouble },
   { title: "Pricing",       url: "/pricing",    icon: IndianRupee },
   { title: "Payments",      url: "/payments",   icon: Receipt },
+  { title: "Invoices",      url: "/invoices",   icon: FileText },
   { title: "Guest Records", url: "/guests",     icon: Users },
   { title: "Reports",       url: "/reports",    icon: BarChart3 },
   { title: "Staff",         url: "/staff",      icon: UserCog },
@@ -47,8 +49,9 @@ const receptionistItems = [
   { title: "Check-in / out",   url: "/check-in-out", icon: LogIn },
   { title: "Active Guests",    url: "/active-guests",icon: UserCheck },
   { title: "Room Allocation",  url: "/allocation",   icon: Grid3x3 },
-  { title: "Payments",         url: "/payments",     icon: Receipt },
-  { title: "Guest Records",    url: "/guests",       icon: Users },
+  { title: "Payments",        url: "/payments",     icon: Receipt },
+  { title: "Invoices",        url: "/invoices",     icon: FileText },
+  { title: "Guest Records",   url: "/guests",       icon: Users },
 ];
 
 export function AppSidebar() {
@@ -68,7 +71,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="overflow-hidden">
               <p className="truncate font-display text-sm font-bold leading-tight text-foreground">
-                Abhijeeth INN
+                Abhitej INN
               </p>
               <p className="truncate text-[11px] text-muted-foreground">Hotel Management</p>
             </div>

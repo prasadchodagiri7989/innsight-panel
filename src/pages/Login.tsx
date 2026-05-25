@@ -35,7 +35,7 @@ export default function Login() {
             <Building2 className="h-8 w-8 text-primary-foreground" />
           </div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-            Hotel Abhijeeth INN
+            Hotel Abhitej INN
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">Staff portal — Admin &amp; Reception</p>
         </div>

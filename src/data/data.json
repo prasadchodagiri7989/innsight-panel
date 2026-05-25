@@ -1,10 +1,10 @@
 {
   "hotel": {
-    "name": "Hotel Abhijeeth INN",
+    "name": "Hotel Abhitej INN",
     "tagline": "Comfort, redefined.",
     "address": "MG Road, Mangalore, Karnataka",
     "phone": "+91 98452 11122",
-    "email": "stay@abhijeethinn.com"
+    "email": "stay@abhitejinn.com"
   },
   "dashboard": {
     "revenue": 1284500,
@@ -65,10 +65,10 @@
     { "id": "G-206", "name": "Sneha Pillai", "phone": "+91 98860 22113", "email": "sneha@example.com", "stays": 2, "lastVisit": "2026-04-29" }
   ],
   "staff": [
-    { "id": "S-01", "name": "Ramesh Kumar", "role": "Admin", "email": "ramesh@abhijeethinn.com", "shift": "General", "status": "active" },
-    { "id": "S-02", "name": "Anjali Menon", "role": "Receptionist", "email": "anjali@abhijeethinn.com", "shift": "Morning", "status": "active" },
-    { "id": "S-03", "name": "Suresh Pai", "role": "Receptionist", "email": "suresh@abhijeethinn.com", "shift": "Evening", "status": "active" },
-    { "id": "S-04", "name": "Divya Hegde", "role": "Receptionist", "email": "divya@abhijeethinn.com", "shift": "Night", "status": "on-leave" }
+    { "id": "S-01", "name": "Ramesh Kumar", "role": "Admin", "email": "ramesh@abhitejinn.com", "shift": "General", "status": "active" },
+    { "id": "S-02", "name": "Anjali Menon", "role": "Receptionist", "email": "anjali@abhitejinn.com", "shift": "Morning", "status": "active" },
+    { "id": "S-03", "name": "Suresh Pai", "role": "Receptionist", "email": "suresh@abhitejinn.com", "shift": "Evening", "status": "active" },
+    { "id": "S-04", "name": "Divya Hegde", "role": "Receptionist", "email": "divya@abhitejinn.com", "shift": "Night", "status": "on-leave" }
   ],
   "reports": {
     "monthlyRevenue": [
