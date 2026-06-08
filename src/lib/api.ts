@@ -41,6 +41,7 @@ export interface Room {
   floor: number;
   type: string;
   price: number;
+  customPrice?: number;
   capacity: number;
   size?: string;
   beds?: string;
@@ -241,6 +242,8 @@ export const adminApi = {
     request(`/rooms/${id}`, { method: 'DELETE' }),
   updateRoom: (id: string, payload: Partial<Room>) =>
     request(`/admin/rooms/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  updateRoomPricing: (payload: { pricing: Record<string, number> }) =>
+    request('/admin/rooms/pricing', { method: 'PATCH', body: JSON.stringify(payload) }),
 
   // Settings
   getSettings: () => request<{ data: HotelSettings }>('/admin/settings'),
@@ -254,6 +257,20 @@ export const adminApi = {
       method: 'PATCH',
       body: JSON.stringify({ newRoomId }),
     }),
+
+  // Activity history
+  getActivityLogs: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ logs: ActivityLog[]; pagination: { page: number; limit: number; total: number; pages: number } }>(
+      `/admin/activity-logs${qs}`
+    );
+  },
+  exportActivityLogsUrl: (params?: Record<string, string>) => {
+    const token = getAccessToken();
+    const allParams = { ...params, token: token || '' };
+    const qs = '?' + new URLSearchParams(allParams).toString();
+    return `${BASE_URL}/admin/activity-logs/export${qs}`;
+  }
 };
 
 // ── Payments API ──────────────────────────────────────────────────────────────
@@ -316,11 +333,16 @@ export const receptionApi = {
     request<{ data: { extraCharges: ExtraCharge[]; invoicePreview: InvoicePreview } }>(
       `/reception/bookings/${bookingId}/charges/${chargeId}`, { method: 'DELETE' }
     ),
-  getRooms: () => request<{ data: Room[] }>('/rooms?limit=50', { auth: false }),
+  getRooms: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ data: Room[] }>(`/rooms${qs}`, { auth: false });
+  },
   getRoomsByType: (type: string) => {
     const qs = new URLSearchParams({ type, status: 'available', limit: '50' }).toString();
     return request<{ data: Room[] }>(`/rooms?${qs}`, { auth: false });
   },
+  getAssignableRooms: (bookingId: string) =>
+    request<{ data: Room[] }>(`/reception/bookings/${bookingId}/assignable-rooms`),
 };
 
 // ── Invoices API ──────────────────────────────────────────────────────────────
@@ -358,4 +380,50 @@ export const invoicesApi = {
     `${BASE_URL}/invoices/${mongoBookingId}/pdf`,
   sendEmail: (mongoBookingId: string) =>
     request<{ message: string }>(`/invoices/${mongoBookingId}/email`, { method: 'POST' }),
+};
+
+export interface Notification {
+  _id: string;
+  recipientId?: string | null;
+  recipientRole?: 'admin' | 'receptionist' | 'user' | null;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  metadata?: Record<string, any>;
+  createdAt: string;
+}
+
+export interface ActivityLog {
+  _id: string;
+  userId?: string | null;
+  userName: string;
+  role: string;
+  action: string;
+  module: string;
+  entityId?: string | null;
+  entityType?: string | null;
+  description: string;
+  previousData?: any;
+  newData?: any;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+}
+
+export const notificationsApi = {
+  getNotifications: (page = 1, limit = 50) =>
+    request<{ notifications: Notification[]; pagination: { page: number; limit: number; total: number; pages: number } }>(
+      `/notifications?page=${page}&limit=${limit}`
+    ),
+  getUnreadCount: () =>
+    request<{ count: number }>('/notifications/unread-count'),
+  readNotification: (id: string) =>
+    request<{ notification: Notification }>(`/notifications/${id}/read`, { method: 'PATCH' }),
+  readAll: () =>
+    request<{ message: string }>('/notifications/read-all', { method: 'PATCH' }),
+  getStreamUrl: () => {
+    const token = getAccessToken();
+    return `${BASE_URL}/notifications/stream?token=${token}`;
+  }
 };

@@ -15,6 +15,7 @@ import Guests from "./pages/Guests";
 import Reports from "./pages/Reports";
 import Staff from "./pages/Staff";
 import Settings from "./pages/Settings";
+import ActivityHistory from "./pages/ActivityHistory";
 import WalkIn from "./pages/WalkIn";
 import CheckInOut from "./pages/CheckInOut";
 import Allocation from "./pages/Allocation";
@@ -54,6 +55,7 @@ function AppRoutes() {
       <Route path="/reports" element={<RequireAuth allow={["admin"]}><AppLayout><Reports /></AppLayout></RequireAuth>} />
       <Route path="/staff" element={<RequireAuth allow={["admin"]}><AppLayout><Staff /></AppLayout></RequireAuth>} />
       <Route path="/settings" element={<RequireAuth allow={["admin"]}><AppLayout><Settings /></AppLayout></RequireAuth>} />
+      <Route path="/admin/activity-history" element={<RequireAuth allow={["admin"]}><AppLayout><ActivityHistory /></AppLayout></RequireAuth>} />
 
       {/* Payments — admin + receptionist */}
       <Route path="/payments" element={<RequireAuth allow={["admin", "receptionist"]}><AppLayout><Payments /></AppLayout></RequireAuth>} />

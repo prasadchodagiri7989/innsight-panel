@@ -297,8 +297,8 @@ function CheckInDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void
   // If booking has no room assigned yet, fetch available rooms of the required type
   const needsRoomAssignment = !b.room;
   const { data: availRoomsData, isLoading: roomsLoading } = useQuery({
-    queryKey: ["available-rooms-for-type", b.roomType],
-    queryFn: () => receptionApi.getRoomsByType(b.roomType),
+    queryKey: ["assignable-rooms-for-booking", b._id],
+    queryFn: () => receptionApi.getAssignableRooms(b._id),
     enabled: needsRoomAssignment,
   });
   const availableRooms = availRoomsData?.data ?? [];
@@ -351,7 +351,7 @@ function CheckInDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void
               {roomsLoading ? (
                 <p className="text-xs text-muted-foreground">Loading available rooms…</p>
               ) : availableRooms.length === 0 ? (
-                <p className="text-xs text-destructive">No available {b.roomType} rooms found.</p>
+                <p className="text-xs text-destructive">No rooms available for assignment.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {availableRooms.map((room) => (
