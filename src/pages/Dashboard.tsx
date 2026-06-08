@@ -61,38 +61,77 @@ export default function Dashboard() {
           </div>
 
           {role === "admin" && d && (
-            <div className="panel overflow-hidden">
-              <div className="flex items-center justify-between border-b border-border/60 p-5">
-                <div>
-                  <h3 className="font-display text-base font-semibold">Recent bookings</h3>
-                  <p className="text-xs text-muted-foreground">Latest 5 reservations</p>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* Recent Bookings */}
+              <div className="panel overflow-hidden">
+                <div className="flex items-center justify-between border-b border-border/60 p-5">
+                  <div>
+                    <h3 className="font-display text-base font-semibold">Recent bookings</h3>
+                    <p className="text-xs text-muted-foreground">Latest 5 reservations</p>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border/60 bg-muted/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                        <th className="px-5 py-3 font-medium">Booking ID</th>
+                        <th className="px-5 py-3 font-medium">Guest</th>
+                        <th className="px-5 py-3 font-medium">Room</th>
+                        <th className="px-5 py-3 font-medium">Status</th>
+                        <th className="px-5 py-3 text-right font-medium">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {d.recentBookings.map((b) => (
+                        <tr key={b._id} className="border-b border-border/40 last:border-0 transition-colors hover:bg-muted/40">
+                          <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">{b.bookingId}</td>
+                          <td className="px-5 py-3.5 font-medium">{b.user?.name ?? "Guest"}</td>
+                          <td className="px-5 py-3.5 text-muted-foreground">
+                            {b.room ? `${b.room.roomNumber} · ${b.room.type}` : "—"}
+                          </td>
+                          <td className="px-5 py-3.5"><StatusBadge status={b.status} /></td>
+                          <td className="px-5 py-3.5 text-right font-semibold">{fmtINR(b.totalAmount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border/60 bg-muted/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="px-5 py-3 font-medium">Booking ID</th>
-                      <th className="px-5 py-3 font-medium">Guest</th>
-                      <th className="px-5 py-3 font-medium">Room</th>
-                      <th className="px-5 py-3 font-medium">Status</th>
-                      <th className="px-5 py-3 text-right font-medium">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {d.recentBookings.map((b) => (
-                      <tr key={b._id} className="border-b border-border/40 last:border-0 transition-colors hover:bg-muted/40">
-                        <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">{b.bookingId}</td>
-                        <td className="px-5 py-3.5 font-medium">{b.user?.name ?? "Guest"}</td>
-                        <td className="px-5 py-3.5 text-muted-foreground">
-                          {b.room ? `${b.room.roomNumber} · ${b.room.type}` : "—"}
-                        </td>
-                        <td className="px-5 py-3.5"><StatusBadge status={b.status} /></td>
-                        <td className="px-5 py-3.5 text-right font-semibold">{fmtINR(b.totalAmount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+
+              {/* Recent Activities */}
+              <div className="panel overflow-hidden">
+                <div className="flex items-center justify-between border-b border-border/60 p-5">
+                  <div>
+                    <h3 className="font-display text-base font-semibold">Recent activities</h3>
+                    <p className="text-xs text-muted-foreground">Latest 10 system and audit history events</p>
+                  </div>
+                </div>
+                <div className="max-h-[350px] overflow-y-auto divide-y divide-border/30">
+                  {(d as any).recentActivities && (d as any).recentActivities.length > 0 ? (
+                    (d as any).recentActivities.map((act: any) => (
+                      <div key={act._id} className="p-4 text-xs transition-colors hover:bg-muted/30">
+                        <div className="flex justify-between items-start gap-2">
+                          <span className="font-semibold text-foreground">
+                            {act.userName} <span className="font-normal text-muted-foreground capitalize">({act.role})</span>
+                          </span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            {new Date(act.createdAt).toLocaleTimeString("en-IN", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: true,
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-primary font-medium mt-0.5">{act.action} &middot; {act.module}</p>
+                        <p className="text-muted-foreground mt-0.5 leading-relaxed">{act.description}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-xs text-muted-foreground">
+                      No recent activities recorded.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

@@ -13,6 +13,7 @@ import {
   UserCheck,
   Receipt,
   FileText,
+  History,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,6 +42,7 @@ const adminItems = [
   { title: "Reports",       url: "/reports",    icon: BarChart3 },
   { title: "Staff",         url: "/staff",      icon: UserCog },
   { title: "Settings",      url: "/settings",   icon: Settings },
+  { title: "Audit Trail",   url: "/admin/activity-history", icon: History },
 ];
 
 const receptionistItems = [

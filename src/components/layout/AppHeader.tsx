@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Bell, Search, ChevronDown, LogOut } from "lucide-react";
+import { Search, ChevronDown, LogOut } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { NotificationBell } from "./NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,9 +65,7 @@ export function AppHeader() {
 
         <div className="flex-1 md:hidden" />
 
-        <button className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-          <Bell className="h-[18px] w-[18px]" strokeWidth={2} />
-        </button>
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

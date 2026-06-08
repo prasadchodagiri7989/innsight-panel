@@ -28,8 +28,15 @@ export default function WalkIn() {
   const [success, setSuccess] = useState("");
 
   const { data: roomsData } = useQuery({
-    queryKey: ["reception-rooms"],
-    queryFn: () => receptionApi.getRooms(),
+    queryKey: ["reception-rooms", form.checkIn, form.checkOut],
+    queryFn: () => {
+      const params: Record<string, string> = { limit: "50" };
+      if (form.checkIn && form.checkOut && new Date(form.checkOut) > new Date(form.checkIn)) {
+        params.checkIn = form.checkIn;
+        params.checkOut = form.checkOut;
+      }
+      return receptionApi.getRooms(params);
+    },
   });
 
   const available = (roomsData?.data ?? []).filter((r) => r.status === "available");
