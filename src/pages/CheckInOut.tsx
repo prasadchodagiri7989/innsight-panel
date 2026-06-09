@@ -374,24 +374,36 @@ function CheckInDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void
           )}
 
           {/* Advance payment */}
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="font-semibold text-sm">Advance Payment (10%)</p>
-              <p className="font-display text-lg font-bold text-primary">{fmtINR(estimatedAdvance)}</p>
+          {b.advancePaid > 0 ? (
+            <div className="rounded-xl border border-success/30 bg-success/5 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-sm text-success">Advance Payment Paid</p>
+                <p className="font-display text-lg font-bold text-success">{fmtINR(b.advancePaid)}</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                This booking already has a recorded advance payment of {fmtINR(b.advancePaid)} via {b.advancePaymentMethod === "net_banking" ? "Net Banking" : b.advancePaymentMethod?.toUpperCase()}.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">Exact amount will be calculated by the server based on configured advance %.</p>
-            <div>
-              <p className="mb-2 text-xs font-medium text-muted-foreground">Payment method</p>
-              <div className="grid grid-cols-2 gap-2">
-                {PAY_METHODS.map((m) => (
-                  <button key={m} onClick={() => setPayMethod(m)}
-                    className={`h-10 rounded-xl border text-sm font-medium capitalize transition-colors ${payMethod === m ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-muted"}`}>
-                    {m === "net_banking" ? "Net Banking" : m.charAt(0).toUpperCase() + m.slice(1)}
-                  </button>
-                ))}
+          ) : (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-sm">Advance Payment (10%)</p>
+                <p className="font-display text-lg font-bold text-primary">{fmtINR(estimatedAdvance)}</p>
+              </div>
+              <p className="text-xs text-muted-foreground">Exact amount will be calculated by the server based on configured advance %.</p>
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted-foreground">Payment method</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {PAY_METHODS.map((m) => (
+                    <button key={m} type="button" onClick={() => setPayMethod(m)}
+                      className={`h-10 rounded-xl border text-sm font-medium capitalize transition-colors ${payMethod === m ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-muted"}`}>
+                      {m === "net_banking" ? "Net Banking" : m.charAt(0).toUpperCase() + m.slice(1)}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -399,7 +411,14 @@ function CheckInDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void
           <button onClick={onClose} className="flex-1 h-11 rounded-xl border border-border text-sm font-medium hover:bg-muted">Cancel</button>
           <button onClick={() => mutation.mutate()} disabled={mutation.isPending || !canCheckIn}
             className="flex-1 h-11 rounded-xl bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-50 flex items-center justify-center gap-2">
-            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><LogIn className="h-4 w-4" /> Confirm Check-in & Collect Advance</>}
+            {mutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <LogIn className="h-4 w-4" />
+                {b.advancePaid > 0 ? "Confirm Check-in" : "Confirm Check-in & Collect Advance"}
+              </>
+            )}
           </button>
         </div>
       </div>
