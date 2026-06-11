@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Search, ChevronDown, LogOut } from "lucide-react";
+import { Search, ChevronDown, LogOut, Lock } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationBell } from "./NotificationBell";
+import { ChangePasswordModal } from "../ChangePasswordModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,7 @@ export function AppHeader() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [changePwOpen, setChangePwOpen] = useState(false);
   const initials = user?.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() ?? "?";
 
   const handleLogout = async () => {
@@ -86,12 +88,18 @@ export function AppHeader() {
               <p className="text-xs capitalize text-muted-foreground">{user?.role} &middot; {user?.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setChangePwOpen(true)} className="cursor-pointer">
+              <Lock className="mr-2 h-4 w-4" /> Change password
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
+
+      <ChangePasswordModal open={changePwOpen} onClose={() => setChangePwOpen(false)} />
     </>
   );
 }

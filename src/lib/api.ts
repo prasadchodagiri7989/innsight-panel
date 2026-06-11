@@ -205,6 +205,11 @@ export const authApi = {
     ),
   logout: () => request('/auth/logout', { method: 'POST' }),
   me: () => request<{ data: User }>('/auth/me'),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ success: boolean; message: string }>('/auth/change-password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
 };
 
 // ── Admin API ─────────────────────────────────────────────────────────────────
@@ -225,6 +230,11 @@ export const adminApi = {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: User[] }>(`/admin/users${qs}`);
   },
+  changeUserPassword: (userId: string, payload: { password: string }) =>
+    request<{ success: boolean; message: string }>(`/admin/users/${userId}/password`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
 
   // Bookings
   getBookings: (params?: Record<string, string>) => {
