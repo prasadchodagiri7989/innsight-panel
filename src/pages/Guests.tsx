@@ -1,21 +1,154 @@
 import { useState } from "react";
-import { Search, Eye, Mail, Phone, Loader2 } from "lucide-react";
+import { Search, Eye, Mail, Phone, Loader2, Key, EyeOff } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { adminApi } from "@/lib/api";
+import { adminApi, ApiError } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
+
+interface AdminChangePasswordModalProps {
+  user: any;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const AdminChangePasswordModal = ({ user, onClose, onSuccess }: AdminChangePasswordModalProps) => {
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleGeneratePassword = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let generated = "";
+    for (let i = 0; i < 12; i++) {
+      generated += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setPassword(generated);
+    setShowPassword(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await adminApi.changeUserPassword(user._id, { password });
+      toast.success(`Updated password for ${user.name}`);
+      onSuccess();
+      onClose();
+    } catch (err) {
+      if (err instanceof ApiError) setError(err.message);
+      else setError("Failed to update password.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!user} onOpenChange={onClose}>
+      <DialogContent className="max-w-md rounded-2xl border border-border bg-card p-0 shadow-elevated">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+          <DialogTitle className="font-display text-xl font-semibold">
+            Change Guest Password
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Update the password for <strong>{user?.name}</strong>.
+          </p>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
+          <div>
+            <Label>New Password</Label>
+            <div className="relative mt-1.5 flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  className="h-10 rounded-xl pr-10"
+                  placeholder="Enter or generate a new password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword((s) => !s)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 rounded-xl px-3"
+                onClick={handleGeneratePassword}
+              >
+                Generate
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Minimum 8 characters. Toggle the eye icon to view the password you are setting.
+            </p>
+          </div>
+
+          {error && (
+            <p className="rounded-lg bg-destructive/10 px-4 py-2.5 text-xs text-destructive">
+              {error}
+            </p>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              className="rounded-full"
+              onClick={onClose}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="rounded-full bg-primary text-primary-foreground shadow-soft"
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save changes
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 export default function Guests() {
   const [q, setQ] = useState("");
+  const { user: currentUser } = useAuth();
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
   const params: Record<string, string> = { role: "user", limit: "100" };
   if (q) params.search = q;
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-users", params],
     queryFn: () => adminApi.getUsers(params),
   });
 
   const users = data?.data ?? [];
+  const isAdmin = currentUser?.role === "admin";
 
   return (
     <div className="space-y-6">
@@ -42,17 +175,18 @@ export default function Guests() {
                   <th className="px-5 py-3 font-medium">Tier</th>
                   <th className="px-5 py-3 font-medium">Total stays</th>
                   <th className="px-5 py-3 font-medium">Member since</th>
+                  {isAdmin && <th className="px-5 py-3 font-medium text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {users.length === 0 ? (
-                  <tr><td colSpan={5} className="px-5 py-10 text-center text-muted-foreground">No guests found.</td></tr>
+                  <tr><td colSpan={isAdmin ? 6 : 5} className="px-5 py-10 text-center text-muted-foreground">No guests found.</td></tr>
                 ) : users.map((g) => (
                   <tr key={g._id} className="border-b border-border/40 last:border-0 transition-colors hover:bg-muted/40">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-soft text-xs font-semibold text-primary">
-                          {g.name.split(" ").map((n) => n[0]).join("").slice(0,2)}
+                          {g.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                         </div>
                         <div>
                           <p className="font-medium">{g.name}</p>
@@ -69,6 +203,18 @@ export default function Guests() {
                     </td>
                     <td className="px-5 py-3.5 text-muted-foreground">{g.totalStays ?? 0} stays</td>
                     <td className="px-5 py-3.5 text-muted-foreground">{g.memberSince ?? (g.createdAt ? new Date(g.createdAt).getFullYear() : "—")}</td>
+                    {isAdmin && (
+                      <td className="px-5 py-3.5 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedUser(g)}
+                          className="h-8 rounded-lg text-primary hover:text-primary hover:bg-primary-soft"
+                        >
+                          <Key className="h-3.5 w-3.5 mr-1" /> Reset PW
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -76,6 +222,12 @@ export default function Guests() {
           </div>
         )}
       </div>
+
+      <AdminChangePasswordModal
+        user={selectedUser}
+        onClose={() => setSelectedUser(null)}
+        onSuccess={refetch}
+      />
     </div>
   );
 }

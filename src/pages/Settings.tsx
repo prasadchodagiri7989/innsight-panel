@@ -45,9 +45,9 @@ export default function Settings() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4">
         {/* Hotel info */}
-        <div className="panel p-6 lg:col-span-2">
+        <div className="panel p-6 ">
           <h3 className="mb-1 font-display text-base font-semibold">Hotel information</h3>
           <p className="mb-5 text-xs text-muted-foreground">These details appear on invoices and confirmations.</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -62,18 +62,7 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Notifications */}
-        <div className="panel p-6">
-          <h3 className="mb-1 font-display text-base font-semibold">Notifications</h3>
-          <p className="mb-5 text-xs text-muted-foreground">Choose what you want to be notified about.</p>
-          <div className="space-y-4">
-            <ToggleRow label="New bookings" defaultChecked />
-            <ToggleRow label="Cancellations" defaultChecked />
-            <ToggleRow label="Daily reports" />
-            <ToggleRow label="Staff updates" defaultChecked />
-            <ToggleRow label="Marketing emails" />
-          </div>
-        </div>
+
       </div>
 
       {/* GST & Billing */}

@@ -96,12 +96,6 @@ export default function Login() {
               {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in…</> : "Sign in"}
             </button>
           </form>
-
-          <div className="mt-6 rounded-xl bg-muted/60 p-4 text-xs text-muted-foreground">
-            <p className="font-semibold text-foreground">Demo credentials</p>
-            <p className="mt-1">Admin: <span className="font-mono">admin@hotelabhitejinn.com</span> / <span className="font-mono">Admin@1234</span></p>
-            <p className="mt-0.5">Reception: <span className="font-mono">reception@hotelabhitejinn.com</span> / <span className="font-mono">Recept@1234</span></p>
-          </div>
         </div>
       </div>
     </div>
