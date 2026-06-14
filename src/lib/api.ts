@@ -146,10 +146,12 @@ export interface ReceptionToday {
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  errors?: { field: string; message: string }[];
+  constructor(status: number, message: string, errors?: { field: string; message: string }[]) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.errors = errors;
   }
 }
 
@@ -177,7 +179,7 @@ async function request<T>(endpoint: string, options: RequestInit & { auth?: bool
   }
 
   const data = await res.json();
-  if (!res.ok) throw new ApiError(res.status, data.message || 'Request failed');
+  if (!res.ok) throw new ApiError(res.status, data.message || 'Request failed', data.errors);
   return data;
 }
 
