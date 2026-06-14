@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UserPlus, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { receptionApi } from "@/lib/api";
+import { receptionApi, ApiError } from "@/lib/api";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { differenceInCalendarDays } from "date-fns";
 
@@ -63,7 +63,18 @@ export default function WalkIn() {
       setError("");
       setForm({ guestName:"",phone:"",email:"",idProof:"",checkIn:"",checkOut:"",roomId:"",notes:"",guests:"2" });
     },
-    onError: (e: any) => { setError(e.message); setSuccess(""); },
+    onError: (e: any) => {
+      if (e instanceof ApiError && e.errors) {
+        setError(JSON.stringify({
+          success: false,
+          message: e.message,
+          errors: e.errors
+        }, null, 4));
+      } else {
+        setError(e.message || "Something went wrong");
+      }
+      setSuccess("");
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -80,7 +91,11 @@ export default function WalkIn() {
       <PageHeader title="Walk-in booking" subtitle="Quickly create a booking for a guest at the front desk." />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <form onSubmit={handleSubmit} className="panel space-y-5 p-6 lg:col-span-2">
-          {error && <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+          {error && (
+            <pre className="rounded-xl bg-destructive/10 p-3 text-xs text-destructive whitespace-pre-wrap font-mono">
+              {error}
+            </pre>
+          )}
           {success && <div className="rounded-xl bg-success/10 p-3 text-sm text-success">{success}</div>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Guest name *" placeholder="e.g. Aarav Sharma" value={form.guestName} onChange={(v) => setForm(f=>({...f,guestName:v}))} />
