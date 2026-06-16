@@ -76,6 +76,8 @@ export interface Booking {
   advancePaid: number;
   advancePaidAt?: string;
   advancePaymentMethod?: string;
+  discount?: number;
+  actualCheckOut?: string;
   invoicePreview?: InvoicePreview;
   createdAt: string;
 }
@@ -103,6 +105,7 @@ export interface ExtraCharge {
 
 export interface InvoicePreview {
   roomSubtotal: number;
+  discount?: number;
   extraChargesTotal: number;
   extraCharges: { description: string; amount: number; category: string }[];
   subtotal: number;
@@ -245,6 +248,14 @@ export const adminApi = {
   },
   updateBookingStatus: (id: string, status: string) =>
     request(`/admin/bookings/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  deleteBooking: (id: string) =>
+    request(`/admin/bookings/${id}`, { method: 'DELETE' }),
+  deletePayment: (id: string) =>
+    request(`/admin/payments/${id}`, { method: 'DELETE' }),
+  deleteInvoice: (id: string) =>
+    request(`/admin/invoices/${id}`, { method: 'DELETE' }),
+  deleteUser: (id: string) =>
+    request(`/admin/users/${id}`, { method: 'DELETE' }),
 
   // Rooms
   getRooms: () => request<{ data: Room[] }>('/admin/rooms'),
@@ -333,9 +344,9 @@ export const receptionApi = {
     request<{ data: { bookingId: string; room: string; advancePaid: number; advancePct: number } }>(
       '/reception/checkin', { method: 'POST', body: JSON.stringify({ bookingId, advancePaymentMethod, ...(roomId ? { roomId } : {}) }) }
     ),
-  checkOut: (bookingId: string, balancePaymentMethod = 'cash') =>
+  checkOut: (bookingId: string, balancePaymentMethod = 'cash', customRoomSubtotal?: number, discount?: number) =>
     request<{ data: { bookingId: string; invoice: Record<string, unknown>; guestName: string } }>(
-      '/reception/checkout', { method: 'POST', body: JSON.stringify({ bookingId, balancePaymentMethod }) }
+      '/reception/checkout', { method: 'POST', body: JSON.stringify({ bookingId, balancePaymentMethod, customRoomSubtotal, discount }) }
     ),
   addCharge: (bookingId: string, payload: { description: string; amount: number; category: string }) =>
     request<{ data: { extraCharges: ExtraCharge[]; invoicePreview: InvoicePreview } }>(
@@ -355,13 +366,18 @@ export const receptionApi = {
   },
   getAssignableRooms: (bookingId: string) =>
     request<{ data: Room[] }>(`/reception/bookings/${bookingId}/assignable-rooms`),
+  extendStay: (bookingId: string, newCheckOutDate: string) =>
+    request<{ success: boolean; message: string }>(`/reception/bookings/${bookingId}/extend`, {
+      method: 'PATCH',
+      body: JSON.stringify({ newCheckOutDate }),
+    }),
 };
 
 // ── Invoices API ──────────────────────────────────────────────────────────────
 export interface Invoice {
   _id: string;
   invoiceNumber: string;
-  booking: { _id: string; bookingId: string; checkInDate: string; checkOutDate: string; nights: number; status: string } | null;
+  booking: { _id: string; bookingId: string; checkInDate: string; checkOutDate: string; actualCheckOut?: string; nights: number; status: string } | null;
   user: { name: string; email: string; phone?: string } | null;
   room: { roomNumber: string; type: string } | null;
   roomSubtotal: number;

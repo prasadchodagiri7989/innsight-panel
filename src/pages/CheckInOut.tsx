@@ -34,6 +34,9 @@ function InvoicePanel({ inv, advancePaid }: { inv: InvoicePreview; advancePaid?:
         {inv.extraChargesTotal > 0 && <Row label="Extras subtotal" value={fmtINR(inv.extraChargesTotal)} />}
         <div className="my-1 border-t border-border/40" />
         <Row label="Subtotal" value={fmtINR(inv.subtotal)} />
+        {Number(inv.discount ?? 0) > 0 && (
+          <Row label="Discount" value={`− ${fmtINR(inv.discount ?? 0)}`} color="text-green-600" />
+        )}
         <Row label={`CGST (${inv.cgstPercentage}%)`} value={fmtINR(inv.cgst)} muted />
         <Row label={`SGST (${inv.sgstPercentage}%)`} value={fmtINR(inv.sgst)} muted />
         <div className="my-1 border-t border-border/40" />
@@ -178,6 +181,12 @@ function InvoiceSuccessModal({ inv, booking, onClose }: {
               <span className="text-muted-foreground">Total</span>
               <span className="font-bold">{fmt(Number(d.totalAmount ?? 0))}</span>
             </div>
+            {Number(d.discount ?? 0) > 0 && (
+              <div className="flex justify-between text-green-600 font-semibold">
+                <span>Discount</span>
+                <span>− {fmt(Number(d.discount ?? 0))}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Advance paid</span>
               <span className="text-muted-foreground">− {fmt(Number(d.advancePaid ?? 0))}</span>
@@ -257,7 +266,10 @@ function BookingDetailSection({ b }: { b: Booking }) {
         <InfoCell icon={Hash} label="Booking ID" value={b.bookingId} mono />
         <InfoCell icon={BedDouble} label="Room" value={b.room ? `${b.room.roomNumber} · ${b.room.type}` : `${b.roomType} (to be assigned)`} />
         <InfoCell icon={Calendar} label="Check-in" value={format(new Date(b.checkInDate), "EEE, dd MMM yyyy")} />
-        <InfoCell icon={Calendar} label="Check-out" value={format(new Date(b.checkOutDate), "EEE, dd MMM yyyy")} />
+        <InfoCell icon={Calendar} label="Check-out (Booked)" value={format(new Date(b.checkOutDate), "EEE, dd MMM yyyy")} />
+        {b.actualCheckOut && (
+          <InfoCell icon={Calendar} label="Check-out (Actual)" value={format(new Date(b.actualCheckOut), "EEE, dd MMM yyyy")} />
+        )}
         <InfoCell label="Nights" value={String(nights)} />
         <InfoCell label="Guests" value={String(b.guests)} />
         <InfoCell label="Room rate/night" value={fmtINR(b.room?.price ?? 0)} />
@@ -435,11 +447,54 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
   const [chargeCat, setChargeCat] = useState("food");
   const [liveInv, setLiveInv] = useState<InvoicePreview | null>(null);
 
-  const extraCharges = b.extraCharges ?? [];
-  const inv = liveInv ?? b.invoicePreview;
+  const { data: detailData, isLoading: detailLoading } = useQuery({
+    queryKey: ["reception-booking-detail", b.bookingId],
+    queryFn: () => receptionApi.getBookingDetail(b.bookingId),
+  });
+
+  const bookingDetail = detailData?.data ?? b;
+
+  const [customRoomSubtotal, setCustomRoomSubtotal] = useState("");
+  const [discount, setDiscount] = useState("0");
+
+  const checkIn = new Date(bookingDetail.actualCheckIn || bookingDetail.checkInDate);
+  const today = new Date();
+  const nightsStayed = Math.max(1, differenceInDays(today, checkIn));
+  const isStayMismatch = nightsStayed !== bookingDetail.nights;
+  const suggestedRoomSubtotal = isStayMismatch ? (bookingDetail.room?.price ?? bookingDetail.pricePerNight ?? 0) * nightsStayed : bookingDetail.subtotal;
+
+  useEffect(() => {
+    if (bookingDetail) {
+      setCustomRoomSubtotal(String(suggestedRoomSubtotal));
+    }
+  }, [bookingDetail, suggestedRoomSubtotal]);
+
+  const currentRoomSubtotal = Number(customRoomSubtotal) || 0;
+  const currentDiscount = Number(discount) || 0;
+
+  const extraCharges = bookingDetail.extraCharges ?? [];
+  const inv = liveInv ?? bookingDetail.invoicePreview;
+
+  // Real-time client-side recalculated preview invoice
+  const computedLiveInv = inv ? {
+    ...inv,
+    roomSubtotal: currentRoomSubtotal,
+    discount: currentDiscount,
+    subtotal: currentRoomSubtotal + inv.extraChargesTotal,
+    cgst: Math.round(Math.max(0, currentRoomSubtotal + inv.extraChargesTotal - currentDiscount) * inv.cgstPercentage) / 100,
+    sgst: Math.round(Math.max(0, currentRoomSubtotal + inv.extraChargesTotal - currentDiscount) * inv.sgstPercentage) / 100,
+    tax: (Math.round(Math.max(0, currentRoomSubtotal + inv.extraChargesTotal - currentDiscount) * inv.cgstPercentage) / 100) +
+         (Math.round(Math.max(0, currentRoomSubtotal + inv.extraChargesTotal - currentDiscount) * inv.sgstPercentage) / 100),
+    totalAmount: Math.max(0, currentRoomSubtotal + inv.extraChargesTotal - currentDiscount) +
+                 (Math.round(Math.max(0, currentRoomSubtotal + inv.extraChargesTotal - currentDiscount) * inv.cgstPercentage) / 100) +
+                 (Math.round(Math.max(0, currentRoomSubtotal + inv.extraChargesTotal - currentDiscount) * inv.sgstPercentage) / 100),
+    balanceDue: Math.max(0, (Math.max(0, currentRoomSubtotal + inv.extraChargesTotal - currentDiscount) +
+                 (Math.round(Math.max(0, currentRoomSubtotal + inv.extraChargesTotal - currentDiscount) * inv.cgstPercentage) / 100) +
+                 (Math.round(Math.max(0, currentRoomSubtotal + inv.extraChargesTotal - currentDiscount) * inv.sgstPercentage) / 100)) - bookingDetail.advancePaid),
+  } : null;
 
   const addChargeMut = useMutation({
-    mutationFn: () => receptionApi.addCharge(b.bookingId, { description: chargeDesc, amount: Number(chargeAmt), category: chargeCat }),
+    mutationFn: () => receptionApi.addCharge(bookingDetail.bookingId, { description: chargeDesc, amount: Number(chargeAmt), category: chargeCat }),
     onSuccess: (res) => {
       setLiveInv(res.data.invoicePreview);
       setChargeDesc(""); setChargeAmt("");
@@ -448,7 +503,7 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
   });
 
   const removeChargeMut = useMutation({
-    mutationFn: (chargeId: string) => receptionApi.removeCharge(b.bookingId, chargeId),
+    mutationFn: (chargeId: string) => receptionApi.removeCharge(bookingDetail.bookingId, chargeId),
     onSuccess: (res) => {
       setLiveInv(res.data.invoicePreview);
       qc.invalidateQueries({ queryKey: ["reception-bookings-active"] });
@@ -458,7 +513,7 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
   const [showBillPreview, setShowBillPreview] = useState(false);
 
   const checkOutMut = useMutation({
-    mutationFn: () => receptionApi.checkOut(b.bookingId, payMethod),
+    mutationFn: () => receptionApi.checkOut(bookingDetail.bookingId, payMethod, currentRoomSubtotal, currentDiscount),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["reception-bookings-active"] });
       onDone(res.data.invoice as Record<string, unknown>);
@@ -467,12 +522,23 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
     },
   });
 
+  if (detailLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="w-full max-w-sm rounded-2xl bg-card shadow-2xl p-6 flex flex-col items-center justify-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading checkout details...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      {showBillPreview && inv && (
+      {showBillPreview && computedLiveInv && (
         <BillPreviewModal
-          inv={inv}
-          booking={b}
+          inv={computedLiveInv}
+          booking={bookingDetail}
           payMethod={payMethod}
           onClose={() => setShowBillPreview(false)}
           onConfirm={() => checkOutMut.mutate()}
@@ -497,13 +563,13 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
 
         {/* Body */}
         <div className="overflow-y-auto p-6 space-y-5">
-          <BookingDetailSection b={b} />
+          <BookingDetailSection b={bookingDetail} />
 
           {/* Advance paid badge */}
-          {b.advancePaid > 0 && (
+          {bookingDetail.advancePaid > 0 && (
             <div className="flex items-center gap-2 rounded-xl bg-success/10 px-3 py-2.5 text-sm text-success">
               <CreditCard className="h-4 w-4 shrink-0" />
-              <span>Advance paid: <strong>{fmtINR(b.advancePaid)}</strong> via {b.advancePaymentMethod}</span>
+              <span>Advance paid: <strong>{fmtINR(bookingDetail.advancePaid)}</strong> via {bookingDetail.advancePaymentMethod}</span>
             </div>
           )}
 
@@ -551,11 +617,58 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
             </div>
           </div>
 
+          {/* Stay Mismatch Warning */}
+          {isStayMismatch && (
+            <div className={`rounded-xl border p-3.5 text-xs ${
+              nightsStayed < bookingDetail.nights
+                ? "border-blue-200 bg-blue-50/50 text-blue-700 dark:border-blue-900/30 dark:bg-blue-950/20 dark:text-blue-300"
+                : "border-amber-200 bg-amber-50/50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-300"
+            }`}>
+              <p className="font-semibold flex items-center gap-1.5 mb-1">
+                <Calendar className="h-3.5 w-3.5" />
+                {nightsStayed < bookingDetail.nights ? "Early Checkout Detected" : "Overstay Stay Detected"}
+              </p>
+              <p>
+                {nightsStayed < bookingDetail.nights
+                  ? `The guest is checking out early (stayed ${nightsStayed} night(s) of ${bookingDetail.nights} booked).`
+                  : `The guest stayed longer than booked (stayed ${nightsStayed} night(s) of ${bookingDetail.nights} booked).`}
+                {" "}Suggested Room Charge: <strong>{fmtINR(suggestedRoomSubtotal)}</strong>.
+              </p>
+            </div>
+          )}
+
+          {/* Adjustments (Room Charge, Discount) */}
+          <div className="rounded-xl border border-border p-4 bg-muted/20 space-y-3">
+            <p className="text-sm font-semibold">Charges & Discounts</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground font-medium">Room Charge (₹)</label>
+                <input
+                  type="number"
+                  value={customRoomSubtotal}
+                  onChange={(e) => setCustomRoomSubtotal(e.target.value)}
+                  className="h-9 w-full mt-1.5 rounded-lg border border-border bg-background px-3 text-sm focus:border-primary focus:outline-none"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">Suggested: {fmtINR(suggestedRoomSubtotal)}</p>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground font-medium">Stay Discount (₹)</label>
+                <input
+                  type="number"
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  className="h-9 w-full mt-1.5 rounded-lg border border-border bg-background px-3 text-xs focus:border-primary focus:outline-none"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">Direct amount deduction</p>
+              </div>
+            </div>
+          </div>
+
           {/* Bill summary */}
-          {inv && (
+          {computedLiveInv && (
             <div>
               <p className="mb-2 text-sm font-semibold">Bill Summary</p>
-              <InvoicePanel inv={inv} advancePaid={b.advancePaid} />
+              <InvoicePanel inv={computedLiveInv} advancePaid={bookingDetail.advancePaid} />
             </div>
           )}
 
@@ -587,6 +700,80 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
   );
 }
 
+// ── Extend Stay Dialog ───────────────────────────────────────────────────────
+function ExtendDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void; onDone: () => void }) {
+  const qc = useQueryClient();
+  const [newDate, setNewDate] = useState("");
+
+  const minDate = format(new Date(b.checkOutDate), "yyyy-MM-dd");
+
+  const mutation = useMutation({
+    mutationFn: () => receptionApi.extendStay(b.bookingId, new Date(newDate).toISOString()),
+    onSuccess: () => {
+      toast({ title: "Stay extended", description: `Checkout extended to ${format(new Date(newDate), "dd MMM yyyy")}.` });
+      qc.invalidateQueries({ queryKey: ["reception-bookings-active"] });
+      onDone();
+      onClose();
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Extension failed",
+        description: err.message || "Failed to extend stay. Check room availability.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleExtend = () => {
+    if (!newDate) return;
+    mutation.mutate();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="w-full max-w-sm rounded-2xl bg-card shadow-2xl flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-primary" />
+            <h2 className="font-display font-bold text-base">Extend Stay</h2>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted"><X className="h-4 w-4" /></button>
+        </div>
+
+        {/* Body */}
+        <div className="p-5 space-y-4">
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p><strong>Guest:</strong> {b.user?.name ?? b.guestDetails?.name ?? "Guest"}</p>
+            <p><strong>Room:</strong> {b.room ? `${b.room.roomNumber} · ${b.room.type}` : `${b.roomType}`}</p>
+            <p><strong>Current Check-out:</strong> {format(new Date(b.checkOutDate), "dd MMM yyyy")}</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground">New Check-out Date</label>
+            <input
+              type="date"
+              min={minDate}
+              value={newDate}
+              onChange={(e) => setNewDate(e.target.value)}
+              className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 border-t border-border/60 px-5 py-4">
+          <button onClick={onClose} className="flex-1 h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted">Cancel</button>
+          <button onClick={handleExtend} disabled={!newDate || mutation.isPending}
+            className="flex-1 h-10 rounded-xl bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-50 flex items-center justify-center gap-1.5">
+            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Booking Card ───────────────────────────────────────────────────────────────
 function BookingCard({ b, onAction }: { b: Booking; onAction: () => void }) {
   const isIn = b.status === "checked_in";
@@ -595,6 +782,7 @@ function BookingCard({ b, onAction }: { b: Booking; onAction: () => void }) {
 
   const [showCheckInDialog, setShowCheckInDialog] = useState(false);
   const [showCheckOutDialog, setShowCheckOutDialog] = useState(false);
+  const [showExtendDialog, setShowExtendDialog] = useState(false);
   const [checkInResult, setCheckInResult] = useState<{ advancePaid: number; advancePct: number } | null>(null);
   const [checkOutResult, setCheckOutResult] = useState<Record<string, unknown> | null>(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -642,6 +830,13 @@ function BookingCard({ b, onAction }: { b: Booking; onAction: () => void }) {
           b={b}
           onClose={() => setShowCheckOutDialog(false)}
           onDone={(invoice) => { setCheckOutResult(invoice); onAction(); }}
+        />
+      )}
+      {showExtendDialog && (
+        <ExtendDialog
+          b={b}
+          onClose={() => setShowExtendDialog(false)}
+          onDone={onAction}
         />
       )}
       {showInvoiceModal && checkOutResult && (
@@ -743,16 +938,27 @@ function BookingCard({ b, onAction }: { b: Booking; onAction: () => void }) {
         {/* Action buttons */}
         <div className="flex flex-wrap gap-2 border-t border-border/60 pt-3">
           {isConfirmed && !checkInResult && (
-            <button onClick={() => setShowCheckInDialog(true)}
-              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary text-xs font-semibold text-primary-foreground shadow-soft hover:bg-primary/90">
-              <LogIn className="h-3.5 w-3.5" /> Check-in
-            </button>
+            <>
+              <button onClick={() => setShowCheckInDialog(true)}
+                className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary text-xs font-semibold text-primary-foreground shadow-soft hover:bg-primary/90">
+                <LogIn className="h-3.5 w-3.5" /> Check-in
+              </button>
+              <button onClick={() => setShowExtendDialog(true)}
+                className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-card px-3 text-xs font-medium hover:bg-muted"
+                title="Extend booking checkout date">
+                <Calendar className="h-3.5 w-3.5" /> Extend
+              </button>
+            </>
           )}
           {isIn && !checkOutResult && (
             <>
               <button onClick={() => setShowAddCharge(!showAddCharge)}
                 className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-card px-3 text-xs font-medium hover:bg-muted">
                 <Plus className="h-3.5 w-3.5" /> Add charge
+              </button>
+              <button onClick={() => setShowExtendDialog(true)}
+                className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-card px-3 text-xs font-medium hover:bg-muted">
+                <Calendar className="h-3.5 w-3.5" /> Extend stay
               </button>
               <button onClick={() => setShowCheckOutDialog(true)}
                 className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl border border-destructive/40 bg-destructive/10 text-xs font-semibold text-destructive hover:bg-destructive/20">

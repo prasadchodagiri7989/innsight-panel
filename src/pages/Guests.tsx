@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Search, Eye, Mail, Phone, Loader2, Key, EyeOff } from "lucide-react";
+import { Search, Eye, Mail, Phone, Loader2, Key, EyeOff, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { adminApi, ApiError } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -139,6 +139,25 @@ export default function Guests() {
   const { user: currentUser } = useAuth();
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
+  const qc = useQueryClient();
+  const deleteUserMutation = useMutation({
+    mutationFn: (id: string) => adminApi.deleteUser(id),
+    onSuccess: () => {
+      toast.success("Guest account deleted successfully.");
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (err: any) => {
+      const msg = err instanceof ApiError ? err.message : "Failed to delete guest account.";
+      toast.error(msg);
+    }
+  });
+
+  const handleDeleteUser = (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete guest account for "${name}"?`)) {
+      deleteUserMutation.mutate(id);
+    }
+  };
+
   const params: Record<string, string> = { role: "user", limit: "100" };
   if (q) params.search = q;
 
@@ -205,14 +224,25 @@ export default function Guests() {
                     <td className="px-5 py-3.5 text-muted-foreground">{g.memberSince ?? (g.createdAt ? new Date(g.createdAt).getFullYear() : "—")}</td>
                     {isAdmin && (
                       <td className="px-5 py-3.5 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedUser(g)}
-                          className="h-8 rounded-lg text-primary hover:text-primary hover:bg-primary-soft"
-                        >
-                          <Key className="h-3.5 w-3.5 mr-1" /> Reset PW
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedUser(g)}
+                            className="h-8 rounded-lg text-primary hover:text-primary hover:bg-primary-soft"
+                          >
+                            <Key className="h-3.5 w-3.5 mr-1" /> Reset PW
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteUser(g._id, g.name)}
+                            className="h-8 w-8 p-0 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                            title="Delete guest record"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     )}
                   </tr>

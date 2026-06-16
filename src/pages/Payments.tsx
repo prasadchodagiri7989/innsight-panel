@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { paymentsApi, Payment, ApiError } from "@/lib/api";
+import { paymentsApi, adminApi, Payment, ApiError } from "@/lib/api";
 import { format } from "date-fns";
 import {
   RefreshCw, Search, Filter, RotateCcw, CheckCircle2,
   Clock, XCircle, IndianRupee, CreditCard, Banknote,
-  AlertCircle, ChevronLeft, ChevronRight,
+  AlertCircle, ChevronLeft, ChevronRight, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -169,6 +169,24 @@ export default function Payments() {
   const [endDate, setEndDate] = useState("");
   const [refundTarget, setRefundTarget] = useState<Payment | null>(null);
 
+  const qc = useQueryClient();
+  const deletePaymentMutation = useMutation({
+    mutationFn: (id: string) => adminApi.deletePayment(id),
+    onSuccess: () => {
+      toast({ title: "Payment deleted", description: "Payment record deleted successfully." });
+      qc.invalidateQueries({ queryKey: ["payments"] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete payment record.", variant: "destructive" });
+    }
+  });
+
+  const handleDeletePayment = (id: string, label: string) => {
+    if (window.confirm(`Are you sure you want to delete payment record (ID/Txn: ${label})?`)) {
+      deletePaymentMutation.mutate(id);
+    }
+  };
+
   const params: Record<string, string> = { page: String(page), limit: "20" };
   if (status !== "all") params.status = status;
   if (method !== "all") params.method = method;
@@ -321,18 +339,29 @@ export default function Payments() {
                         )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {canRefund ? (
+                        <div className="flex items-center gap-2">
+                          {canRefund ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 rounded-lg text-xs gap-1 border-destructive/40 text-destructive hover:bg-destructive/10"
+                              onClick={() => setRefundTarget(p)}
+                            >
+                              <RotateCcw className="h-3 w-3" /> Refund
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="h-7 rounded-lg text-xs gap-1 border-destructive/40 text-destructive hover:bg-destructive/10"
-                            onClick={() => setRefundTarget(p)}
+                            variant="ghost"
+                            className="h-7 w-7 rounded-lg p-0 hover:bg-destructive/10 hover:text-destructive text-muted-foreground"
+                            onClick={() => handleDeletePayment(p._id, p.transactionId || p.razorpayPaymentId || p._id)}
+                            title="Delete payment record"
                           >
-                            <RotateCcw className="h-3 w-3" /> Refund
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   );

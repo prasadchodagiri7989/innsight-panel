@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Filter, Plus, MoreHorizontal, Loader2 } from "lucide-react";
+import { Filter, Plus, MoreHorizontal, Loader2, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { adminApi } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { toast } from "@/hooks/use-toast";
 
 const fmtINR = (n: number) => "₹" + new Intl.NumberFormat("en-IN").format(n);
 
@@ -28,6 +29,23 @@ export default function Bookings() {
     mutationFn: ({ id, status }: { id: string; status: string }) => adminApi.updateBookingStatus(id, status),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-bookings"] }),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => adminApi.deleteBooking(id),
+    onSuccess: () => {
+      toast({ title: "Booking deleted", description: "The booking has been successfully removed." });
+      qc.invalidateQueries({ queryKey: ["admin-bookings"] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete booking.", variant: "destructive" });
+    }
+  });
+
+  const handleDelete = (id: string, bookingId: string) => {
+    if (window.confirm(`Are you sure you want to delete booking #${bookingId}?`)) {
+      deleteMutation.mutate(id);
+    }
+  };
 
   const bookings = data?.data ?? [];
 
@@ -76,19 +94,35 @@ export default function Bookings() {
                     <td className="px-5 py-3.5 font-medium">{b.user?.name ?? b.guestDetails?.name ?? "Guest"}</td>
                     <td className="px-5 py-3.5 text-muted-foreground">{b.room ? `${b.room.roomNumber} · ${b.room.type}` : "—"}</td>
                     <td className="px-5 py-3.5 text-muted-foreground">{format(new Date(b.checkInDate), "dd MMM yyyy")}</td>
-                    <td className="px-5 py-3.5 text-muted-foreground">{format(new Date(b.checkOutDate), "dd MMM yyyy")}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground">
+                      <div>{format(new Date(b.checkOutDate), "dd MMM yyyy")}</div>
+                      {b.actualCheckOut && (
+                        <div className="text-[10px] text-green-600 dark:text-green-400 font-medium">
+                          Act: {format(new Date(b.actualCheckOut), "dd MMM yyyy")}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-5 py-3.5"><StatusBadge status={b.status} /></td>
                     <td className="px-5 py-3.5 text-right font-semibold">{fmtINR(b.totalAmount)}</td>
                     <td className="px-5 py-3.5 text-right">
-                      <select
-                        value={b.status}
-                        onChange={(e) => statusMutation.mutate({ id: b._id, status: e.target.value })}
-                        className="h-8 rounded-lg border border-border bg-background px-2 text-xs focus:border-primary focus:outline-none"
-                      >
-                        {["pending","confirmed","checked_in","checked_out","cancelled","completed"].map((s) => (
-                          <option key={s} value={s}>{s.replace("_"," ")}</option>
-                        ))}
-                      </select>
+                      <div className="flex items-center justify-end gap-2">
+                        <select
+                          value={b.status}
+                          onChange={(e) => statusMutation.mutate({ id: b._id, status: e.target.value })}
+                          className="h-8 rounded-lg border border-border bg-background px-2 text-xs focus:border-primary focus:outline-none"
+                        >
+                          {["pending","confirmed","checked_in","checked_out","cancelled","completed"].map((s) => (
+                            <option key={s} value={s}>{s.replace("_"," ")}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => handleDelete(b._id, b.bookingId)}
+                          className="p-1.5 rounded-lg border border-border hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Delete booking"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

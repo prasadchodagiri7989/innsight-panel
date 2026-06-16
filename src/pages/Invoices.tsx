@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Search, Download, Send, Receipt, Loader2, ChevronLeft, ChevronRight, CheckCircle2, X } from "lucide-react";
+import { Search, Download, Send, Receipt, Loader2, ChevronLeft, ChevronRight, CheckCircle2, X, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { invoicesApi, type Invoice } from "@/lib/api";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { invoicesApi, adminApi, type Invoice } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 
@@ -84,8 +84,16 @@ function InvoiceDetailModal({ inv, onClose }: { inv: Invoice; onClose: () => voi
             )}
             {inv.booking?.checkOutDate && (
               <div className="rounded-lg border border-border/60 bg-background px-3 py-2">
-                <p className="text-muted-foreground">Check-out</p>
+                <p className="text-muted-foreground">Check-out (Booked)</p>
                 <p className="font-semibold">{format(new Date(inv.booking.checkOutDate), "dd MMM yyyy")}</p>
+              </div>
+            )}
+            {inv.booking?.actualCheckOut && (
+              <div className="rounded-lg border border-border/60 bg-background px-3 py-2 col-span-2">
+                <p className="text-muted-foreground">Check-out (Actual)</p>
+                <p className="font-semibold text-green-600 dark:text-green-400">
+                  {format(new Date(inv.booking.actualCheckOut), "dd MMM yyyy, hh:mm a")}
+                </p>
               </div>
             )}
           </div>
@@ -143,6 +151,24 @@ export default function Invoices() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
+
+  const qc = useQueryClient();
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: (id: string) => adminApi.deleteInvoice(id),
+    onSuccess: () => {
+      toast({ title: "Invoice deleted", description: "The invoice record has been deleted." });
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+    },
+    onError: () => {
+      toast({ title: "Deletion failed", description: "Could not delete invoice.", variant: "destructive" });
+    }
+  });
+
+  const handleDeleteInvoice = (id: string, invoiceNumber: string) => {
+    if (window.confirm(`Are you sure you want to delete invoice #${invoiceNumber}?`)) {
+      deleteInvoiceMutation.mutate(id);
+    }
+  };
 
   // Debounce search
   const handleSearch = (val: string) => {
@@ -236,7 +262,12 @@ export default function Invoices() {
               </thead>
               <tbody className="divide-y divide-border/40">
                 {invoices.map((inv) => (
-                  <InvoiceRow key={inv._id} inv={inv} onView={() => setSelectedInv(inv)} />
+                  <InvoiceRow
+                    key={inv._id}
+                    inv={inv}
+                    onView={() => setSelectedInv(inv)}
+                    onDelete={() => handleDeleteInvoice(inv._id, inv.invoiceNumber)}
+                  />
                 ))}
               </tbody>
             </table>
@@ -267,7 +298,7 @@ export default function Invoices() {
   );
 }
 
-function InvoiceRow({ inv, onView }: { inv: Invoice; onView: () => void }) {
+function InvoiceRow({ inv, onView, onDelete }: { inv: Invoice; onView: () => void; onDelete: () => void }) {
   const [emailSent, setEmailSent] = useState(false);
   const mongoBookingId = inv.booking?._id ?? "";
 
@@ -310,7 +341,16 @@ function InvoiceRow({ inv, onView }: { inv: Invoice; onView: () => void }) {
       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{inv.booking?.bookingId ?? "—"}</td>
       <td className="px-4 py-3 text-xs">{inv.room ? `${inv.room.roomNumber} · ${inv.room.type}` : "—"}</td>
       <td className="px-4 py-3 text-xs text-muted-foreground">
-        {inv.booking?.checkOutDate ? format(new Date(inv.booking.checkOutDate), "dd MMM yyyy") : "—"}
+        {inv.booking?.checkOutDate ? (
+          <>
+            <div>{format(new Date(inv.booking.checkOutDate), "dd MMM yyyy")}</div>
+            {inv.booking.actualCheckOut && (
+              <div className="text-[10px] text-green-600 dark:text-green-400 font-medium">
+                Act: {format(new Date(inv.booking.actualCheckOut), "dd MMM yyyy")}
+              </div>
+            )}
+          </>
+        ) : "—"}
       </td>
       <td className="px-4 py-3 text-right font-semibold">{fmtINR(inv.totalAmount)}</td>
       <td className="px-4 py-3 text-right">
@@ -334,6 +374,10 @@ function InvoiceRow({ inv, onView }: { inv: Invoice; onView: () => void }) {
           <button onClick={onView} title="View invoice"
             className="h-8 rounded-lg border border-border px-2.5 text-xs font-medium hover:bg-muted">
             View
+          </button>
+          <button onClick={onDelete} title="Delete invoice"
+            className="h-8 w-8 rounded-lg border border-border flex items-center justify-center hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
       </td>
