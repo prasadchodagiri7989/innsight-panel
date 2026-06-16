@@ -92,6 +92,8 @@ export interface Staff {
   contact?: { phone?: string; email?: string };
   isActive: boolean;
   joiningDate?: string;
+  address?: string;
+  notes?: string;
 }
 
 export interface ExtraCharge {
@@ -319,10 +321,10 @@ export const paymentsApi = {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: Payment[]; meta: { total: number; page: number; limit: number; pages: number } }>(`/payments${qs}`);
   },
-  refund: (id: string, reason?: string, refundAmount?: number) =>
+  refund: (id: string, reason?: string, refundAmount?: number, password?: string) =>
     request<{ data: { refundId: string; refundAmount: number; status: string } }>(
       `/payments/${id}/refund`,
-      { method: 'POST', body: JSON.stringify({ reason, refundAmount }) }
+      { method: 'POST', body: JSON.stringify({ reason, refundAmount, password }) }
     ),
 };
 
