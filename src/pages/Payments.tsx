@@ -61,18 +61,27 @@ function RefundDialog({
   const qc = useQueryClient();
   const [reason, setReason] = useState("Refund requested by guest");
   const [amount, setAmount] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleClose = () => {
+    setReason("Refund requested by guest");
+    setAmount("");
+    setPassword("");
+    onClose();
+  };
 
   const mutation = useMutation({
     mutationFn: () =>
       paymentsApi.refund(
         payment!._id,
         reason,
-        amount ? parseFloat(amount) : undefined
+        amount ? parseFloat(amount) : undefined,
+        password
       ),
     onSuccess: () => {
       toast({ title: "Refund processed", description: "The refund has been initiated successfully." });
       qc.invalidateQueries({ queryKey: ["payments"] });
-      onClose();
+      handleClose();
     },
     onError: (err) => {
       const msg = err instanceof ApiError ? err.message : "Refund failed";
@@ -84,7 +93,7 @@ function RefundDialog({
   const maxRefund = payment.amount;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Process Refund</DialogTitle>
@@ -132,6 +141,17 @@ function RefundDialog({
               onChange={(e) => setReason(e.target.value)}
             />
           </div>
+          <div>
+            <Label>Confirm Password</Label>
+            <Input
+              className="mt-1.5 h-11 rounded-xl text-sm"
+              type="password"
+              placeholder="Enter your account password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
           {payment.method === "razorpay" && (
             <p className="text-xs text-muted-foreground rounded-lg bg-blue-50 px-3 py-2">
               This will trigger an automatic refund via Razorpay to the guest's original payment method.
@@ -144,10 +164,10 @@ function RefundDialog({
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="rounded-xl">Cancel</Button>
+          <Button variant="outline" onClick={handleClose} className="rounded-xl">Cancel</Button>
           <Button
             onClick={() => mutation.mutate()}
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || !password}
             className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             {mutation.isPending ? "Processing…" : "Confirm Refund"}

@@ -1,14 +1,136 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Loader2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, X, Calendar, Shield, Clock, Phone, Mail, MapPin, IndianRupee, FileText } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { adminApi, type Staff } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { format } from "date-fns";
+
+const fmtINR = (n?: number) => n !== undefined ? "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(n) : "—";
+
+function StaffDetailsDialog({
+  staff,
+  open,
+  onClose,
+}: {
+  staff: Staff | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!staff) return null;
+
+  const formatDate = (dateStr?: string | Date) => {
+    if (!dateStr) return "—";
+    try {
+      return format(new Date(dateStr), "dd MMM yyyy");
+    } catch {
+      return "—";
+    }
+  };
+
+  const initials = staff.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md rounded-2xl p-6">
+        <DialogHeader className="flex flex-row items-center gap-4 border-b pb-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-primary text-lg font-bold text-primary-foreground shadow-sm">
+            {initials}
+          </div>
+          <div className="space-y-0.5">
+            <DialogTitle className="text-xl font-bold tracking-tight">{staff.name}</DialogTitle>
+            <p className="text-xs font-mono text-muted-foreground">{staff.employeeId || "—"}</p>
+          </div>
+        </DialogHeader>
+
+        <div className="mt-4 space-y-4 text-sm">
+          {/* Main Info Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <Shield className="h-3.5 w-3.5" /> Role
+              </span>
+              <p className="font-semibold capitalize pl-5">{staff.role}</p>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" /> Shift
+              </span>
+              <p className="font-semibold capitalize pl-5">{staff.shift}</p>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <IndianRupee className="h-3.5 w-3.5" /> Salary
+              </span>
+              <p className="font-semibold pl-5">{fmtINR(staff.salary)}</p>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" /> Joined Date
+              </span>
+              <p className="font-semibold pl-5">{formatDate(staff.joiningDate)}</p>
+            </div>
+          </div>
+
+          <div className="border-t border-border/40 pt-4 space-y-3">
+            {/* Contact details */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Contact Information</p>
+              
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <Phone className="h-4 w-4 shrink-0 text-primary animate-pulse" />
+                <span className="text-foreground font-medium">{staff.contact?.phone || "—"}</span>
+              </div>
+
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <Mail className="h-4 w-4 shrink-0 text-primary" />
+                <span className="text-foreground font-medium break-all">{staff.contact?.email || "—"}</span>
+              </div>
+            </div>
+
+            {/* Address */}
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" /> Address
+              </span>
+              <p className="text-foreground pl-5 leading-relaxed">{staff.address || "—"}</p>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5" /> Notes
+              </span>
+              <p className="text-foreground pl-5 leading-relaxed bg-muted/40 p-2.5 rounded-xl border border-border/30">
+                {staff.notes || "No notes available."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function Staff() {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", role: "receptionist", shift: "morning", salary: "", phone: "", email: "" });
   const [formError, setFormError] = useState("");
+  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
 
   const { data, isLoading } = useQuery({ queryKey: ["admin-staff"], queryFn: () => adminApi.getStaff() });
 
@@ -99,7 +221,8 @@ export default function Staff() {
                 {staff.length === 0 ? (
                   <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">No staff found.</td></tr>
                 ) : staff.map((s) => (
-                  <tr key={s._id} className="border-b border-border/40 last:border-0 transition-colors hover:bg-muted/40">
+                  <tr key={s._id} onClick={() => setSelectedStaff(s)}
+                    className="border-b border-border/40 last:border-0 transition-colors hover:bg-muted/40 cursor-pointer">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-primary text-xs font-semibold text-primary-foreground">
@@ -117,7 +240,7 @@ export default function Staff() {
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => { if(confirm("Deactivate this staff member?")) deleteMutation.mutate(s._id); }}
+                        <button onClick={(e) => { e.stopPropagation(); if(confirm("Deactivate this staff member?")) deleteMutation.mutate(s._id); }}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive">
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -130,6 +253,8 @@ export default function Staff() {
           </div>
         )}
       </div>
+
+      <StaffDetailsDialog staff={selectedStaff} open={!!selectedStaff} onClose={() => setSelectedStaff(null)} />
     </div>
   );
 }
