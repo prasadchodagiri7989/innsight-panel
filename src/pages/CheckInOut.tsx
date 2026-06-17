@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Search, LogIn, LogOut, Plus, Trash2, User, Loader2, Receipt, CreditCard, Banknote, Download, Send, CheckCircle2, X, BedDouble, Calendar, Hash, Phone, Mail, Home } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { receptionApi, invoicesApi, type Booking, type InvoicePreview } from "@/lib/api";
+import { receptionApi, invoicesApi, type Booking, type InvoicePreview, ApiError } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, differenceInDays } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -325,6 +325,12 @@ function CheckInDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void
       onDone({ advancePaid: res.data.advancePaid, advancePct: res.data.advancePct, room: res.data.room });
       onClose();
     },
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to check in.";
+      toast({ title: "Check-in failed", description: msg, variant: "destructive" });
+    }
   });
 
   const canCheckIn = !needsRoomAssignment || !!selectedRoomId;
@@ -500,6 +506,12 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
       setChargeDesc(""); setChargeAmt("");
       qc.invalidateQueries({ queryKey: ["reception-bookings-active"] });
     },
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to add charge.";
+      toast({ title: "Error adding charge", description: msg, variant: "destructive" });
+    }
   });
 
   const removeChargeMut = useMutation({
@@ -508,6 +520,12 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
       setLiveInv(res.data.invoicePreview);
       qc.invalidateQueries({ queryKey: ["reception-bookings-active"] });
     },
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to remove charge.";
+      toast({ title: "Error removing charge", description: msg, variant: "destructive" });
+    }
   });
 
   const [showBillPreview, setShowBillPreview] = useState(false);
@@ -520,6 +538,12 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
       setShowBillPreview(false);
       onClose();
     },
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to check out.";
+      toast({ title: "Checkout failed", description: msg, variant: "destructive" });
+    }
   });
 
   if (detailLoading) {
@@ -716,9 +740,12 @@ function ExtendDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void;
       onClose();
     },
     onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to extend stay. Check room availability.";
       toast({
         title: "Extension failed",
-        description: err.message || "Failed to extend stay. Check room availability.",
+        description: msg,
         variant: "destructive"
       });
     }
@@ -802,6 +829,12 @@ function BookingCard({ b, onAction }: { b: Booking; onAction: () => void }) {
       setChargeDesc(""); setChargeAmt(""); setShowAddCharge(false);
       qc.invalidateQueries({ queryKey: ["reception-bookings-active"] });
     },
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to add charge.";
+      toast({ title: "Error adding charge", description: msg, variant: "destructive" });
+    }
   });
 
   const removeChargeMut = useMutation({
@@ -810,6 +843,12 @@ function BookingCard({ b, onAction }: { b: Booking; onAction: () => void }) {
       setLiveInv(res.data.invoicePreview);
       qc.invalidateQueries({ queryKey: ["reception-bookings-active"] });
     },
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to remove charge.";
+      toast({ title: "Error removing charge", description: msg, variant: "destructive" });
+    }
   });
 
   const extraCharges = b.extraCharges ?? [];

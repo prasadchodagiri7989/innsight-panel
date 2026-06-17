@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Search, Download, Send, Receipt, Loader2, ChevronLeft, ChevronRight, CheckCircle2, X, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { invoicesApi, adminApi, type Invoice } from "@/lib/api";
+import { invoicesApi, adminApi, type Invoice, ApiError } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -159,8 +159,11 @@ export default function Invoices() {
       toast({ title: "Invoice deleted", description: "The invoice record has been deleted." });
       qc.invalidateQueries({ queryKey: ["invoices"] });
     },
-    onError: () => {
-      toast({ title: "Deletion failed", description: "Could not delete invoice.", variant: "destructive" });
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Could not delete invoice.";
+      toast({ title: "Deletion failed", description: msg, variant: "destructive" });
     }
   });
 

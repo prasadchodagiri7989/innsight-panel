@@ -49,7 +49,9 @@ const AdminChangePasswordModal = ({ user, onClose, onSuccess }: AdminChangePassw
       onSuccess();
       onClose();
     } catch (err) {
-      if (err instanceof ApiError) setError(err.message);
+      if (err instanceof ApiError) {
+        setError(err.errors && err.errors.length > 0 ? err.errors.map(x => x.message).join("\n") : err.message);
+      }
       else setError("Failed to update password.");
     } finally {
       setLoading(false);
@@ -104,7 +106,7 @@ const AdminChangePasswordModal = ({ user, onClose, onSuccess }: AdminChangePassw
           </div>
 
           {error && (
-            <p className="rounded-lg bg-destructive/10 px-4 py-2.5 text-xs text-destructive">
+            <p className="rounded-lg bg-destructive/10 px-4 py-2.5 text-xs text-destructive whitespace-pre-wrap">
               {error}
             </p>
           )}
@@ -147,8 +149,10 @@ export default function Guests() {
       qc.invalidateQueries({ queryKey: ["admin-users"] });
     },
     onError: (err: any) => {
-      const msg = err instanceof ApiError ? err.message : "Failed to delete guest account.";
-      toast.error(msg);
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err instanceof ApiError ? err.message : "Failed to delete guest account.";
+      toast.error(<span className="whitespace-pre-wrap">{msg}</span>);
     }
   });
 

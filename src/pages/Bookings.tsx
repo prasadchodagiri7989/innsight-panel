@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Filter, Plus, MoreHorizontal, Loader2, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { adminApi } from "@/lib/api";
+import { adminApi, ApiError } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -28,6 +28,12 @@ export default function Bookings() {
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => adminApi.updateBookingStatus(id, status),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-bookings"] }),
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to update booking status.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    }
   });
 
   const deleteMutation = useMutation({
@@ -36,8 +42,11 @@ export default function Bookings() {
       toast({ title: "Booking deleted", description: "The booking has been successfully removed." });
       qc.invalidateQueries({ queryKey: ["admin-bookings"] });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to delete booking.", variant: "destructive" });
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to delete booking.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
     }
   });
 
