@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Loader2, X, Calendar, Shield, Clock, Phone, Mail, MapPin, IndianRupee, FileText } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { adminApi, type Staff } from "@/lib/api";
+import { adminApi, type Staff, ApiError } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -141,7 +141,13 @@ export default function Staff() {
       contact: { phone: form.phone || undefined, email: form.email || undefined },
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-staff"] }); setShowForm(false); setForm({ name:"",role:"receptionist",shift:"morning",salary:"",phone:"",email:"" }); },
-    onError: (e: any) => setFormError(e.message),
+    onError: (e: any) => {
+      if (e instanceof ApiError && e.errors && e.errors.length > 0) {
+        setFormError(e.errors.map((err) => err.message).join("\n"));
+      } else {
+        setFormError(e.message || "Something went wrong");
+      }
+    },
   });
 
   const deleteMutation = useMutation({
@@ -167,7 +173,7 @@ export default function Staff() {
             <h3 className="font-display text-base font-semibold">New staff member</h3>
             <button onClick={() => setShowForm(false)}><X className="h-4 w-4" /></button>
           </div>
-          {formError && <p className="text-sm text-destructive">{formError}</p>}
+          {formError && <p className="text-sm text-destructive whitespace-pre-wrap">{formError}</p>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {[["name","Full name","text"],["salary","Salary (₹)","number"],["phone","Phone","text"],["email","Email","email"]].map(([k,l,t]) => (
               <div key={k}>

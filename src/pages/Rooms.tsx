@@ -2,7 +2,7 @@ import { useState } from "react";
 import { BedDouble, Wifi, Snowflake, Tv, Wine, Sparkles, Loader2, Pencil, X, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { adminApi, type Room } from "@/lib/api";
+import { adminApi, type Room, ApiError } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const amenityIcon: Record<string, typeof Wifi> = { WiFi: Wifi, AC: Snowflake, TV: Tv, "Mini Bar": Wine, "Mini-bar": Wine, Lounge: Sparkles };
@@ -40,7 +40,12 @@ function AddRoomModal({ onClose }: { onClose: () => void }) {
       qc.invalidateQueries({ queryKey: ["admin-rooms"] });
       onClose();
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to create room.";
+      setError(msg);
+    },
   });
 
   const toggleAmenity = (a: string) =>
@@ -57,7 +62,7 @@ function AddRoomModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted"><X className="h-5 w-5" /></button>
         </div>
         <div className="max-h-[70vh] overflow-y-auto p-6 space-y-4">
-          {error && <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+          {error && <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive whitespace-pre-wrap">{error}</div>}
           <div className="grid grid-cols-2 gap-4">
             <Field label="Room number *" value={form.roomNumber} onChange={(v) => setForm(f => ({ ...f, roomNumber: v }))} />
             <div>
@@ -120,7 +125,12 @@ function DeleteConfirmModal({ room, onClose }: { room: Room; onClose: () => void
       qc.invalidateQueries({ queryKey: ["admin-rooms"] });
       onClose();
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to delete room.";
+      setError(msg);
+    },
   });
 
   return (
@@ -132,7 +142,7 @@ function DeleteConfirmModal({ room, onClose }: { room: Room; onClose: () => void
           </div>
           <h2 className="font-display text-lg font-bold">Delete Room {room.roomNumber}?</h2>
           <p className="text-sm text-muted-foreground">This room will be deactivated. Rooms with active bookings cannot be deleted.</p>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive whitespace-pre-wrap">{error}</p>}
         </div>
         <div className="flex gap-3 border-t border-border/60 px-6 py-4">
           <button onClick={onClose} className="flex-1 h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted">Cancel</button>
@@ -174,7 +184,12 @@ function EditRoomModal({ room, onClose }: { room: Room; onClose: () => void }) {
       qc.invalidateQueries({ queryKey: ["admin-rooms"] });
       onClose();
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to update room.";
+      setError(msg);
+    },
   });
 
   const toggleAmenity = (a: string) =>
@@ -191,7 +206,7 @@ function EditRoomModal({ room, onClose }: { room: Room; onClose: () => void }) {
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted"><X className="h-5 w-5" /></button>
         </div>
         <div className="max-h-[70vh] overflow-y-auto p-6 space-y-4">
-          {error && <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+          {error && <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive whitespace-pre-wrap">{error}</div>}
           <div className="grid grid-cols-2 gap-4">
             <Field label="Capacity (guests)" type="number" value={form.capacity} onChange={(v) => setForm(f => ({ ...f, capacity: v }))} />
             <Field label="Bed type (e.g. King)" value={form.beds} onChange={(v) => setForm(f => ({ ...f, beds: v }))} />

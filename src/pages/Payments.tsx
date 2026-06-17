@@ -84,7 +84,9 @@ function RefundDialog({
       handleClose();
     },
     onError: (err) => {
-      const msg = err instanceof ApiError ? err.message : "Refund failed";
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err instanceof ApiError ? err.message : "Refund failed";
       toast({ title: "Refund failed", description: msg, variant: "destructive" });
     },
   });
@@ -196,8 +198,11 @@ export default function Payments() {
       toast({ title: "Payment deleted", description: "Payment record deleted successfully." });
       qc.invalidateQueries({ queryKey: ["payments"] });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to delete payment record.", variant: "destructive" });
+    onError: (err: any) => {
+      const msg = err instanceof ApiError && err.errors && err.errors.length > 0
+        ? err.errors.map((x: any) => x.message).join("\n")
+        : err.message || "Failed to delete payment record.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
     }
   });
 

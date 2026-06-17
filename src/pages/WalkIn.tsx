@@ -64,12 +64,8 @@ export default function WalkIn() {
       setForm({ guestName:"",phone:"",email:"",idProof:"",checkIn:"",checkOut:"",roomId:"",notes:"",guests:"2" });
     },
     onError: (e: any) => {
-      if (e instanceof ApiError && e.errors) {
-        setError(JSON.stringify({
-          success: false,
-          message: e.message,
-          errors: e.errors
-        }, null, 4));
+      if (e instanceof ApiError && e.errors && e.errors.length > 0) {
+        setError(e.errors.map((err) => err.message).join("\n"));
       } else {
         setError(e.message || "Something went wrong");
       }
@@ -92,9 +88,9 @@ export default function WalkIn() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <form onSubmit={handleSubmit} className="panel space-y-5 p-6 lg:col-span-2">
           {error && (
-            <pre className="rounded-xl bg-destructive/10 p-3 text-xs text-destructive whitespace-pre-wrap font-mono">
+            <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive whitespace-pre-wrap">
               {error}
-            </pre>
+            </div>
           )}
           {success && <div className="rounded-xl bg-success/10 p-3 text-sm text-success">{success}</div>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
