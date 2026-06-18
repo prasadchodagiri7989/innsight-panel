@@ -23,6 +23,7 @@ export default function WalkIn() {
   const [form, setForm] = useState({
     guestName: "", phone: "", email: "", idProof: "",
     checkIn: "", checkOut: "", roomId: "", notes: "", guests: "2",
+    customPricePerNight: "", discount: "",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -45,8 +46,10 @@ export default function WalkIn() {
   const nights = form.checkIn && form.checkOut
     ? Math.max(0, differenceInCalendarDays(new Date(form.checkOut), new Date(form.checkIn)))
     : 0;
-  const subtotal = selectedRoom ? selectedRoom.price * nights : 0;
-  const tax = Math.round(subtotal * 0.12);
+  const pricePerNight = form.customPricePerNight ? Number(form.customPricePerNight) : (selectedRoom ? (selectedRoom.customPrice ?? selectedRoom.price) : 0);
+  const subtotal = pricePerNight * nights;
+  const discountAmount = form.discount ? Number(form.discount) : 0;
+  const total = Math.max(0, subtotal - discountAmount);
 
   const mutation = useMutation({
     mutationFn: () => receptionApi.createOfflineBooking({
@@ -57,11 +60,13 @@ export default function WalkIn() {
       guestDetails: { name: form.guestName, email: form.email, phone: form.phone, idProof: form.idProof || undefined },
       specialRequests: form.notes || undefined,
       source: "offline",
+      customPricePerNight: form.customPricePerNight ? Number(form.customPricePerNight) : undefined,
+      discount: form.discount ? Number(form.discount) : undefined,
     }),
     onSuccess: (res) => {
       setSuccess(`Booking created: ${res.data.bookingId}`);
       setError("");
-      setForm({ guestName:"",phone:"",email:"",idProof:"",checkIn:"",checkOut:"",roomId:"",notes:"",guests:"2" });
+      setForm({ guestName:"",phone:"",email:"",idProof:"",checkIn:"",checkOut:"",roomId:"",notes:"",guests:"2",customPricePerNight:"",discount:"" });
     },
     onError: (e: any) => {
       if (e instanceof ApiError && e.errors && e.errors.length > 0) {
@@ -117,6 +122,8 @@ export default function WalkIn() {
                 {[1,2,3,4,5,6].map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
+            <Field label="Custom Price/Night (optional)" placeholder="e.g. 1800" type="number" value={form.customPricePerNight} onChange={(v) => setForm(f=>({...f,customPricePerNight:v}))} />
+            <Field label="Discount (optional)" placeholder="e.g. 200" type="number" value={form.discount} onChange={(v) => setForm(f=>({...f,discount:v}))} />
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Notes</label>
               <textarea rows={3} value={form.notes} onChange={(e) => setForm(f=>({...f,notes:e.target.value}))}
@@ -125,7 +132,7 @@ export default function WalkIn() {
             </div>
           </div>
           <div className="flex items-center justify-end gap-2 border-t border-border/60 pt-5">
-            <button type="button" onClick={() => setForm({guestName:"",phone:"",email:"",idProof:"",checkIn:"",checkOut:"",roomId:"",notes:"",guests:"2"})}
+            <button type="button" onClick={() => setForm({guestName:"",phone:"",email:"",idProof:"",checkIn:"",checkOut:"",roomId:"",notes:"",guests:"2",customPricePerNight:"",discount:""})}
               className="h-11 rounded-xl border border-border bg-card px-5 text-sm font-medium hover:bg-muted">Clear</button>
             <button type="submit" disabled={mutation.isPending}
               className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-soft transition-all hover:shadow-elevated hover:bg-primary/90 disabled:opacity-60">
@@ -141,9 +148,10 @@ export default function WalkIn() {
               ["Available rooms", String(available.length)],
               ["Selected room", selectedRoom ? `#${selectedRoom.roomNumber}` : "—"],
               ["Nights", String(nights)],
+              ["Price per night", fmtINR(pricePerNight)],
               ["Subtotal", fmtINR(subtotal)],
-              ["Taxes (12%)", fmtINR(tax)],
-              ["Total", fmtINR(subtotal + tax)],
+              ["Discount", fmtINR(discountAmount)],
+              ["Total", fmtINR(total)],
             ].map(([l,v]) => (
               <div key={l} className="flex justify-between">
                 <dt className="text-muted-foreground">{l}</dt>

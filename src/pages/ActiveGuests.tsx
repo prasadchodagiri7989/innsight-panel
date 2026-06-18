@@ -65,7 +65,7 @@ function ChangeRoomDialog({ booking, availableRooms, onClose }: ChangeRoomDialog
           <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm">
             <span className="text-muted-foreground">Current room:</span>{" "}
             <span className="font-semibold">
-              {currentRoom.roomNumber} · {currentRoom.type} · {fmtINR(currentRoom.price)}/night
+              {currentRoom.roomNumber} · {currentRoom.type} · {fmtINR(booking.pricePerNight ?? currentRoom.price)}/night
             </span>
           </div>
         )}
@@ -170,7 +170,7 @@ function GuestDetailDialog({ booking, availableRooms, onClose }: GuestDetailDial
           <InfoRow label="Check-in" value={booking.actualCheckIn ? fmtDate(booking.actualCheckIn as unknown as string) : fmtDate(booking.checkInDate)} />
           <InfoRow label="Due Out" value={fmtDate(booking.checkOutDate)} />
           <InfoRow label="Nights" value={String(booking.nights)} />
-          <InfoRow label="Room Rate" value={booking.room ? fmtINR(booking.room.price) + "/night" : "—"} />
+          <InfoRow label="Room Rate" value={booking.room ? fmtINR(booking.pricePerNight ?? booking.room.price) + "/night" : "—"} />
           <InfoRow label="Subtotal" value={fmtINR(booking.subtotal)} />
           <InfoRow label="Tax" value={fmtINR(booking.tax)} />
           <InfoRow label="Total" value={fmtINR(booking.totalAmount)} />

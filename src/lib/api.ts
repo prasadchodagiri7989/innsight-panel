@@ -341,6 +341,8 @@ export const receptionApi = {
     roomId: string; checkInDate: string; checkOutDate: string; guests: number;
     guestDetails: { name: string; email: string; phone: string; idProof?: string };
     specialRequests?: string; source?: string;
+    customPricePerNight?: number;
+    discount?: number;
   }) => request<{ data: Booking }>('/reception/book', { method: 'POST', body: JSON.stringify(payload) }),
   checkIn: (bookingId: string, advancePaymentMethod = 'cash', roomId?: string) =>
     request<{ data: { bookingId: string; room: string; advancePaid: number; advancePct: number } }>(
