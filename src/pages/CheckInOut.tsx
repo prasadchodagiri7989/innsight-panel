@@ -461,7 +461,7 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
   const bookingDetail = detailData?.data ?? b;
 
   const [customRoomSubtotal, setCustomRoomSubtotal] = useState("");
-  const [discount, setDiscount] = useState("0");
+  const [discount, setDiscount] = useState(String(b.discount ?? 0));
 
   const checkIn = new Date(bookingDetail.actualCheckIn || bookingDetail.checkInDate);
   const today = new Date();
@@ -472,6 +472,7 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
   useEffect(() => {
     if (bookingDetail) {
       setCustomRoomSubtotal(String(suggestedRoomSubtotal));
+      setDiscount(String(bookingDetail.discount ?? 0));
     }
   }, [bookingDetail, suggestedRoomSubtotal]);
 
