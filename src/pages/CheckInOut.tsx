@@ -272,7 +272,7 @@ function BookingDetailSection({ b }: { b: Booking }) {
         )}
         <InfoCell label="Nights" value={String(nights)} />
         <InfoCell label="Guests" value={String(b.guests)} />
-        <InfoCell label="Room rate/night" value={fmtINR(b.room?.price ?? 0)} />
+        <InfoCell label="Room rate/night" value={fmtINR(b.pricePerNight ?? b.room?.price ?? 0)} />
         <InfoCell label="Room subtotal" value={fmtINR(b.subtotal)} />
       </div>
 
@@ -467,7 +467,7 @@ function CheckOutDialog({ b, onClose, onDone }: { b: Booking; onClose: () => voi
   const today = new Date();
   const nightsStayed = Math.max(1, differenceInDays(today, checkIn));
   const isStayMismatch = nightsStayed !== bookingDetail.nights;
-  const suggestedRoomSubtotal = isStayMismatch ? (bookingDetail.room?.price ?? bookingDetail.pricePerNight ?? 0) * nightsStayed : bookingDetail.subtotal;
+  const suggestedRoomSubtotal = isStayMismatch ? (bookingDetail.pricePerNight ?? bookingDetail.room?.price ?? 0) * nightsStayed : bookingDetail.subtotal;
 
   useEffect(() => {
     if (bookingDetail) {
