@@ -301,7 +301,15 @@ export const adminApi = {
 // ── Payments API ──────────────────────────────────────────────────────────────
 export interface Payment {
   _id: string;
-  booking: { bookingId: string; roomType: string; checkInDate: string; checkOutDate: string; totalAmount: number; status: string } | null;
+  booking: {
+    bookingId: string;
+    roomType: string;
+    checkInDate: string;
+    checkOutDate: string;
+    totalAmount: number;
+    status: string;
+    guestDetails?: { name: string; email: string; phone: string };
+  } | null;
   user: { name: string; email: string; phone?: string } | null;
   amount: number;
   method: string;
