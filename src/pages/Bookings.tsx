@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { Filter, Plus, MoreHorizontal, Loader2, Trash2 } from "lucide-react";
+import { Filter, Plus, MoreHorizontal, Loader2, Trash2, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { adminApi, ApiError } from "@/lib/api";
@@ -15,6 +25,7 @@ export default function Bookings() {
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; bookingId: string } | null>(null);
 
   const params: Record<string, string> = { limit: "100" };
   if (statusFilter !== "all") params.status = statusFilter;
@@ -51,9 +62,7 @@ export default function Bookings() {
   });
 
   const handleDelete = (id: string, bookingId: string) => {
-    if (window.confirm(`Are you sure you want to delete booking #${bookingId}?`)) {
-      deleteMutation.mutate(id);
-    }
+    setDeleteTarget({ id, bookingId });
   };
 
   const bookings = data?.data ?? [];
@@ -140,6 +149,35 @@ export default function Bookings() {
           </div>
         )}
       </div>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-elevated">
+          <AlertDialogHeader className="flex flex-col items-center text-center space-y-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="font-display text-lg font-bold">Delete Booking?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground text-center">
+              Are you sure you want to delete booking <strong className="text-foreground">#{deleteTarget?.bookingId}</strong>? This action cannot be undone and will cascade-delete all associated payments, invoices, and restore room availability.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-3 mt-4">
+            <AlertDialogCancel className="flex-1 h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted mt-0">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteTarget) {
+                  deleteMutation.mutate(deleteTarget.id);
+                  setDeleteTarget(null);
+                }
+              }}
+              className="flex-1 h-10 rounded-xl bg-destructive text-sm font-semibold text-destructive-foreground hover:bg-destructive/90 transition-colors"
+            >
+              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
