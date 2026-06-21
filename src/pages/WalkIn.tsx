@@ -151,7 +151,7 @@ export default function WalkIn() {
               ["Price per night", fmtINR(pricePerNight)],
               ["Subtotal", fmtINR(subtotal)],
               ["Discount", fmtINR(discountAmount)],
-              ["Total", fmtINR(total)],
+              ["Total (pay at check-out)", fmtINR(total)],
             ].map(([l,v]) => (
               <div key={l} className="flex justify-between">
                 <dt className="text-muted-foreground">{l}</dt>
@@ -159,7 +159,11 @@ export default function WalkIn() {
               </div>
             ))}
           </dl>
+          <div className="mt-4 rounded-lg bg-success/10 px-3 py-2 text-xs text-success font-medium">
+            ✓ No advance payment required — full amount collected at check-out
+          </div>
         </div>
+
       </div>
     </div>
   );

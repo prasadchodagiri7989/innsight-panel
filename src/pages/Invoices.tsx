@@ -1,5 +1,18 @@
 import { useState } from "react";
-import { Search, Download, Send, Receipt, Loader2, ChevronLeft, ChevronRight, CheckCircle2, X, Trash2 } from "lucide-react";
+import { Search, Download, Send, Receipt, Loader2, ChevronLeft, ChevronRight, CheckCircle2, X, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { invoicesApi, adminApi, type Invoice, ApiError } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -151,6 +164,9 @@ export default function Invoices() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; invoiceNumber: string } | null>(null);
+  const [sortKey, setSortKey] = useState("date_desc");
+  const [sortBy, sortOrder] = sortKey.split("_");
 
   const qc = useQueryClient();
   const deleteInvoiceMutation = useMutation({
@@ -168,9 +184,7 @@ export default function Invoices() {
   });
 
   const handleDeleteInvoice = (id: string, invoiceNumber: string) => {
-    if (window.confirm(`Are you sure you want to delete invoice #${invoiceNumber}?`)) {
-      deleteInvoiceMutation.mutate(id);
-    }
+    setDeleteTarget({ id, invoiceNumber });
   };
 
   // Debounce search
@@ -187,8 +201,10 @@ export default function Invoices() {
   if (debouncedQ) params.search = debouncedQ;
   if (startDate) params.startDate = startDate;
   if (endDate) params.endDate = endDate;
+  params.sortBy = sortBy;
+  params.sortOrder = sortOrder;
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ["invoices", params],
     queryFn: () => invoicesApi.list(params),
     staleTime: 30_000,
@@ -216,7 +232,7 @@ export default function Invoices() {
             className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
           />
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           <input
             type="date"
             value={startDate}
@@ -236,6 +252,33 @@ export default function Invoices() {
               Clear
             </button>
           )}
+
+          <Select value={sortKey} onValueChange={(val) => { setSortKey(val); setPage(1); }}>
+            <SelectTrigger className="h-11 w-[180px] rounded-xl text-sm border-border bg-background">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date_desc">Date & Time (Newest)</SelectItem>
+              <SelectItem value="date_asc">Date & Time (Oldest)</SelectItem>
+              <SelectItem value="guestName_asc">Guest Name (A-Z)</SelectItem>
+              <SelectItem value="guestName_desc">Guest Name (Z-A)</SelectItem>
+              <SelectItem value="amount_desc">Total (High to Low)</SelectItem>
+              <SelectItem value="amount_asc">Total (Low to High)</SelectItem>
+              <SelectItem value="balance_desc">Balance (High to Low)</SelectItem>
+              <SelectItem value="balance_asc">Balance (Low to High)</SelectItem>
+              <SelectItem value="invoiceNumber_desc">Invoice # (High to Low)</SelectItem>
+              <SelectItem value="invoiceNumber_asc">Invoice # (Low to High)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <button
+            onClick={() => qc.invalidateQueries({ queryKey: ["invoices"] })}
+            disabled={isLoading || isFetching}
+            className="h-11 w-11 rounded-xl border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+            title="Refresh Invoices"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          </button>
         </div>
       </div>
 
@@ -297,6 +340,36 @@ export default function Invoices() {
           )}
         </div>
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-elevated">
+          <AlertDialogHeader className="flex flex-col items-center text-center space-y-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="font-display text-lg font-bold">Delete Invoice?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground text-center">
+              Are you sure you want to delete invoice <strong className="text-foreground">#{deleteTarget?.invoiceNumber}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-3 mt-4">
+            <AlertDialogCancel className="flex-1 h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted mt-0">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteTarget) {
+                  deleteInvoiceMutation.mutate(deleteTarget.id);
+                  setDeleteTarget(null);
+                }
+              }}
+              className="flex-1 h-10 rounded-xl bg-destructive text-sm font-semibold text-destructive-foreground hover:bg-destructive/90 transition-colors"
+            >
+              {deleteInvoiceMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

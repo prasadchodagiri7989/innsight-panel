@@ -1,12 +1,22 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { paymentsApi, adminApi, Payment, ApiError } from "@/lib/api";
+import { paymentsApi, adminApi, Payment, ApiError, getAccessToken } from "@/lib/api";
 import { format } from "date-fns";
 import {
   RefreshCw, Search, Filter, RotateCcw, CheckCircle2,
   Clock, XCircle, IndianRupee, CreditCard, Banknote,
-  AlertCircle, ChevronLeft, ChevronRight, Trash2,
+  AlertCircle, ChevronLeft, ChevronRight, Trash2, Download, AlertTriangle,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -190,6 +200,8 @@ export default function Payments() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [refundTarget, setRefundTarget] = useState<Payment | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
 
   const qc = useQueryClient();
   const deletePaymentMutation = useMutation({
@@ -207,9 +219,7 @@ export default function Payments() {
   });
 
   const handleDeletePayment = (id: string, label: string) => {
-    if (window.confirm(`Are you sure you want to delete payment record (ID/Txn: ${label})?`)) {
-      deletePaymentMutation.mutate(id);
-    }
+    setDeleteTarget({ id, label });
   };
 
   const params: Record<string, string> = { page: String(page), limit: "20" };
@@ -225,10 +235,40 @@ export default function Payments() {
   });
 
   const payments: Payment[] = (data as any)?.data ?? [];
-  const meta = (data as any)?.meta ?? { total: 0, pages: 1 };
+  const meta = (data as any)?.meta ?? { total: 0, pages: 1, totalPaidAmount: 0, totalRefundedAmount: 0, totalPendingCount: 0 };
 
-  const totalPaid = payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0);
-  const totalRefunded = payments.filter((p) => ["refunded", "partially_refunded"].includes(p.status)).reduce((s, p) => s + (p.refundAmount ?? p.amount), 0);
+  // Use aggregate totals from backend (across ALL filtered payments, not just this page)
+  const totalPaid = meta.totalPaidAmount ?? 0;
+  const totalRefunded = meta.totalRefundedAmount ?? 0;
+  const totalPendingCount = meta.totalPendingCount ?? 0;
+
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      const exportParams: Record<string, string> = {};
+      if (status !== "all") exportParams.status = status;
+      if (method !== "all") exportParams.method = method;
+      if (startDate) exportParams.startDate = startDate;
+      if (endDate) exportParams.endDate = endDate;
+      if (search) exportParams.search = search;
+
+      const url = paymentsApi.exportUrl(exportParams);
+      const token = getAccessToken();
+      const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `payments_${new Date().toISOString().split("T")[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      toast({ title: "Exported", description: "CSV file downloaded successfully." });
+    } catch (e: any) {
+      toast({ title: "Export failed", description: e.message, variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -237,18 +277,23 @@ export default function Payments() {
           <h1 className="text-2xl font-bold tracking-tight">Payment Transactions</h1>
           <p className="text-sm text-muted-foreground">View and manage all payment records</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} className="rounded-xl gap-1.5">
-          <RefreshCw className="h-4 w-4" /> Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={exporting} className="rounded-xl gap-1.5">
+            <Download className="h-4 w-4" /> {exporting ? "Exporting…" : "Export CSV"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="rounded-xl gap-1.5">
+            <RefreshCw className="h-4 w-4" /> Refresh
+          </Button>
+        </div>
       </div>
 
-      {/* Summary cards */}
+      {/* Summary cards — using real aggregate totals from backend */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
           { label: "Total Records", value: String(meta.total), icon: IndianRupee, color: "text-foreground" },
-          { label: "Paid (this page)", value: `₹${totalPaid.toLocaleString("en-IN")}`, icon: CheckCircle2, color: "text-green-600" },
-          { label: "Refunded (this page)", value: `₹${totalRefunded.toLocaleString("en-IN")}`, icon: RotateCcw, color: "text-orange-600" },
-          { label: "Pending (this page)", value: String(payments.filter((p) => p.status === "pending").length), icon: Clock, color: "text-yellow-600" },
+          { label: "Total Paid (filtered)", value: `₹${totalPaid.toLocaleString("en-IN")}`, icon: CheckCircle2, color: "text-green-600" },
+          { label: "Total Refunded (filtered)", value: `₹${totalRefunded.toLocaleString("en-IN")}`, icon: RotateCcw, color: "text-orange-600" },
+          { label: "Pending (filtered)", value: String(totalPendingCount), icon: Clock, color: "text-yellow-600" },
         ].map((c) => (
           <div key={c.label} className="rounded-xl border bg-card p-4 shadow-sm">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -416,6 +461,36 @@ export default function Payments() {
       )}
 
       <RefundDialog payment={refundTarget} open={!!refundTarget} onClose={() => setRefundTarget(null)} />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-elevated">
+          <AlertDialogHeader className="flex flex-col items-center text-center space-y-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="font-display text-lg font-bold">Delete Payment Record?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground text-center">
+              Are you sure you want to delete the payment record for <strong className="text-foreground">{deleteTarget?.label}</strong>? This action is permanent and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-3 mt-4">
+            <AlertDialogCancel className="flex-1 h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted mt-0">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteTarget) {
+                  deletePaymentMutation.mutate(deleteTarget.id);
+                  setDeleteTarget(null);
+                }
+              }}
+              className="flex-1 h-10 rounded-xl bg-destructive text-sm font-semibold text-destructive-foreground hover:bg-destructive/90 transition-colors"
+            >
+              {deletePaymentMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { Search, Eye, Mail, Phone, Loader2, Key, EyeOff, Trash2 } from "lucide-react";
+import { Search, Eye, Mail, Phone, Loader2, Key, EyeOff, Trash2, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { adminApi, ApiError } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -140,6 +150,7 @@ export default function Guests() {
   const [q, setQ] = useState("");
   const { user: currentUser } = useAuth();
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const qc = useQueryClient();
   const deleteUserMutation = useMutation({
@@ -157,9 +168,7 @@ export default function Guests() {
   });
 
   const handleDeleteUser = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete guest account for "${name}"?`)) {
-      deleteUserMutation.mutate(id);
-    }
+    setDeleteTarget({ id, name });
   };
 
   const params: Record<string, string> = { role: "user", limit: "100" };
@@ -262,6 +271,36 @@ export default function Guests() {
         onClose={() => setSelectedUser(null)}
         onSuccess={refetch}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-elevated">
+          <AlertDialogHeader className="flex flex-col items-center text-center space-y-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="font-display text-lg font-bold">Delete Guest Account?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground text-center">
+              Are you sure you want to delete guest account for <strong className="text-foreground">{deleteTarget?.name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-3 mt-4">
+            <AlertDialogCancel className="flex-1 h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted mt-0">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteTarget) {
+                  deleteUserMutation.mutate(deleteTarget.id);
+                  setDeleteTarget(null);
+                }
+              }}
+              className="flex-1 h-10 rounded-xl bg-destructive text-sm font-semibold text-destructive-foreground hover:bg-destructive/90 transition-colors"
+            >
+              {deleteUserMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Loader2, X, Calendar, Shield, Clock, Phone, Mail, MapPin, IndianRupee, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, X, Calendar, Shield, Clock, Phone, Mail, MapPin, IndianRupee, FileText, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { adminApi, type Staff, ApiError } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -131,6 +141,7 @@ export default function Staff() {
   const [form, setForm] = useState({ name: "", role: "receptionist", shift: "morning", salary: "", phone: "", email: "" });
   const [formError, setFormError] = useState("");
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+  const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data, isLoading } = useQuery({ queryKey: ["admin-staff"], queryFn: () => adminApi.getStaff() });
 
@@ -246,7 +257,7 @@ export default function Staff() {
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={(e) => { e.stopPropagation(); if(confirm("Deactivate this staff member?")) deleteMutation.mutate(s._id); }}
+                        <button onClick={(e) => { e.stopPropagation(); setDeactivateTarget({ id: s._id, name: s.name }); }}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive">
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -261,6 +272,36 @@ export default function Staff() {
       </div>
 
       <StaffDetailsDialog staff={selectedStaff} open={!!selectedStaff} onClose={() => setSelectedStaff(null)} />
+
+      <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(null)}>
+        <AlertDialogContent className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-elevated">
+          <AlertDialogHeader className="flex flex-col items-center text-center space-y-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="font-display text-lg font-bold">Deactivate Staff Member?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground text-center">
+              Are you sure you want to deactivate <strong className="text-foreground">{deactivateTarget?.name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-3 mt-4">
+            <AlertDialogCancel className="flex-1 h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted mt-0">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deactivateTarget) {
+                  deleteMutation.mutate(deactivateTarget.id);
+                  setDeactivateTarget(null);
+                }
+              }}
+              className="flex-1 h-10 rounded-xl bg-destructive text-sm font-semibold text-destructive-foreground hover:bg-destructive/90 transition-colors"
+            >
+              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Deactivate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

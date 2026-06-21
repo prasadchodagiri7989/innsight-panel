@@ -319,13 +319,18 @@ export interface Payment {
 export const paymentsApi = {
   getAll: (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-    return request<{ data: Payment[]; meta: { total: number; page: number; limit: number; pages: number } }>(`/payments${qs}`);
+    return request<{ data: Payment[]; meta: { total: number; page: number; limit: number; pages: number; totalPaidAmount: number; totalRefundedAmount: number; totalPendingCount: number } }>(`/payments${qs}`);
   },
   refund: (id: string, reason?: string, refundAmount?: number, password?: string) =>
     request<{ data: { refundId: string; refundAmount: number; status: string } }>(
       `/payments/${id}/refund`,
       { method: 'POST', body: JSON.stringify({ reason, refundAmount, password }) }
     ),
+  exportUrl: (params?: Record<string, string>) => {
+    const allParams = { ...(params ?? {}) };
+    const qs = Object.keys(allParams).length > 0 ? '?' + new URLSearchParams(allParams).toString() : '';
+    return `${BASE_URL}/payments/export${qs}`;
+  },
 };
 
 // ── Reception API ─────────────────────────────────────────────────────────────
