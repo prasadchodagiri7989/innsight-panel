@@ -346,7 +346,9 @@ function CheckInDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void
             </div>
             <div>
               <h2 className="font-display text-base font-bold leading-none">Check-in Guest</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Review details and collect advance payment</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {b.source === "offline" ? "Review details and confirm check-in" : "Review details and collect advance payment"}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted"><X className="h-4 w-4" /></button>
@@ -392,35 +394,37 @@ function CheckInDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void
           )}
 
           {/* Advance payment */}
-          {b.advancePaid > 0 ? (
-            <div className="rounded-xl border border-success/30 bg-success/5 p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-sm text-success">Advance Payment Paid</p>
-                <p className="font-display text-lg font-bold text-success">{fmtINR(b.advancePaid)}</p>
+          {b.source !== "offline" && (
+            b.advancePaid > 0 ? (
+              <div className="rounded-xl border border-success/30 bg-success/5 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-sm text-success">Advance Payment Paid</p>
+                  <p className="font-display text-lg font-bold text-success">{fmtINR(b.advancePaid)}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This booking already has a recorded advance payment of {fmtINR(b.advancePaid)} via {b.advancePaymentMethod === "net_banking" ? "Net Banking" : b.advancePaymentMethod?.toUpperCase()}.
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                This booking already has a recorded advance payment of {fmtINR(b.advancePaid)} via {b.advancePaymentMethod === "net_banking" ? "Net Banking" : b.advancePaymentMethod?.toUpperCase()}.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-sm">Advance Payment (10%)</p>
-                <p className="font-display text-lg font-bold text-primary">{fmtINR(estimatedAdvance)}</p>
-              </div>
-              <p className="text-xs text-muted-foreground">Exact amount will be calculated by the server based on configured advance %.</p>
-              <div>
-                <p className="mb-2 text-xs font-medium text-muted-foreground">Payment method</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {PAY_METHODS.map((m) => (
-                    <button key={m} type="button" onClick={() => setPayMethod(m)}
-                      className={`h-10 rounded-xl border text-sm font-medium capitalize transition-colors ${payMethod === m ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-muted"}`}>
-                      {m === "net_banking" ? "Net Banking" : m.charAt(0).toUpperCase() + m.slice(1)}
-                    </button>
-                  ))}
+            ) : (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-sm">Advance Payment (10%)</p>
+                  <p className="font-display text-lg font-bold text-primary">{fmtINR(estimatedAdvance)}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">Exact amount will be calculated by the server based on configured advance %.</p>
+                <div>
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">Payment method</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {PAY_METHODS.map((m) => (
+                      <button key={m} type="button" onClick={() => setPayMethod(m)}
+                        className={`h-10 rounded-xl border text-sm font-medium capitalize transition-colors ${payMethod === m ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-muted"}`}>
+                        {m === "net_banking" ? "Net Banking" : m.charAt(0).toUpperCase() + m.slice(1)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            )
           )}
         </div>
 
@@ -434,7 +438,7 @@ function CheckInDialog({ b, onClose, onDone }: { b: Booking; onClose: () => void
             ) : (
               <>
                 <LogIn className="h-4 w-4" />
-                {b.advancePaid > 0 ? "Confirm Check-in" : "Confirm Check-in & Collect Advance"}
+                {b.advancePaid > 0 || b.source === "offline" ? "Confirm Check-in" : "Confirm Check-in & Collect Advance"}
               </>
             )}
           </button>

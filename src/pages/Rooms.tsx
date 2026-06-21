@@ -161,24 +161,32 @@ function DeleteConfirmModal({ room, onClose }: { room: Room; onClose: () => void
 function EditRoomModal({ room, onClose }: { room: Room; onClose: () => void }) {
   const qc = useQueryClient();
   const [form, setForm] = useState({
+    roomNumber: room.roomNumber,
+    floor: String(room.floor),
+    type: room.type,
     capacity: String(room.capacity),
     size: room.size ?? "",
     beds: room.beds ?? "",
     description: room.description ?? "",
     amenities: [...room.amenities],
     status: room.status,
+    customPrice: room.customPrice !== undefined ? String(room.customPrice) : "",
   });
   const [error, setError] = useState("");
 
   const mutation = useMutation({
     mutationFn: () =>
       adminApi.updateRoom(room._id, {
+        roomNumber: form.roomNumber,
+        floor: Number(form.floor),
+        type: form.type,
         capacity: Number(form.capacity),
         size: form.size,
         beds: form.beds,
         description: form.description,
         amenities: form.amenities,
         status: form.status,
+        customPrice: form.customPrice !== "" ? Number(form.customPrice) : (null as any),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-rooms"] });
@@ -208,16 +216,32 @@ function EditRoomModal({ room, onClose }: { room: Room; onClose: () => void }) {
         <div className="max-h-[70vh] overflow-y-auto p-6 space-y-4">
           {error && <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive whitespace-pre-wrap">{error}</div>}
           <div className="grid grid-cols-2 gap-4">
+            <Field label="Room number *" value={form.roomNumber} onChange={(v) => setForm(f => ({ ...f, roomNumber: v }))} />
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Floor *</label>
+              <select value={form.floor} onChange={(e) => setForm(f => ({ ...f, floor: e.target.value }))}
+                className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm focus:border-primary focus:outline-none">
+                {["1","2","3"].map((n) => <option key={n} value={n}>Floor {n}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Room type *</label>
+              <select value={form.type} onChange={(e) => setForm(f => ({ ...f, type: e.target.value }))}
+                className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm focus:border-primary focus:outline-none">
+                {ROOM_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Status</label>
+              <select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
+                className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm focus:border-primary focus:outline-none">
+                {["available","occupied","maintenance","reserved"].map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
+              </select>
+            </div>
             <Field label="Capacity (guests)" type="number" value={form.capacity} onChange={(v) => setForm(f => ({ ...f, capacity: v }))} />
             <Field label="Bed type (e.g. King)" value={form.beds} onChange={(v) => setForm(f => ({ ...f, beds: v }))} />
             <Field label="Room size (e.g. 28m²)" value={form.size} onChange={(v) => setForm(f => ({ ...f, size: v }))} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Status</label>
-            <select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-              className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm focus:border-primary focus:outline-none">
-              {["available","occupied","maintenance","reserved"].map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
-            </select>
+            <Field label="Custom Price/Night (optional)" type="number" value={form.customPrice} onChange={(v) => setForm(f => ({ ...f, customPrice: v }))} />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Description</label>
@@ -235,10 +259,11 @@ function EditRoomModal({ room, onClose }: { room: Room; onClose: () => void }) {
               ))}
             </div>
           </div>
+          <p className="text-[11px] text-muted-foreground">💡 Custom price overrides the room-type pricing for this room only. Leave blank to use the room-type default price.</p>
         </div>
         <div className="flex gap-3 border-t border-border/60 px-6 py-4">
           <button onClick={onClose} className="flex-1 h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted">Cancel</button>
-          <button onClick={() => mutation.mutate()} disabled={mutation.isPending}
+          <button onClick={() => mutation.mutate()} disabled={mutation.isPending || !form.roomNumber}
             className="flex-1 h-10 rounded-xl bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-60 flex items-center justify-center gap-2">
             {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save changes"}
           </button>
