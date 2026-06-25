@@ -270,10 +270,14 @@ export const adminApi = {
   updateRoomPricing: (payload: { pricing: Record<string, number> }) =>
     request('/admin/rooms/pricing', { method: 'PATCH', body: JSON.stringify(payload) }),
 
-  // Settings
   getSettings: () => request<{ data: HotelSettings }>('/admin/settings'),
   updateSettings: (payload: Partial<HotelSettings>) =>
     request('/admin/settings', { method: 'PATCH', body: JSON.stringify(payload) }),
+  clearData: (payload: { dataTypes: string[]; startDate?: string; endDate?: string; password?: string; clearAllDates?: boolean }) =>
+    request<{ success: boolean; message: string; data: Record<string, number> }>('/admin/clear-data', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 
   // Active guests
   getActiveGuests: () => request<{ data: Booking[] }>('/admin/active-guests'),
